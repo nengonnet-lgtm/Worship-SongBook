@@ -43,14 +43,18 @@ export const GUITAR_CHORDS: Record<string, GuitarChordData> = {
   // Major 7ths
   'Cmaj7': { chord: 'Cmaj7', frets: [-1, 3, 2, 0, 0, 0], fingers: [0, 3, 2, 0, 0, 0] },
   'Dmaj7': { chord: 'Dmaj7', frets: [-1, -1, 0, 2, 2, 2], fingers: [0, 0, 0, 1, 2, 3] },
+  'Ebmaj7': { chord: 'Ebmaj7', frets: [-1, -1, 1, 3, 3, 3], fingers: [0, 0, 1, 2, 3, 4], baseFret: 1 },
   'Fmaj7': { chord: 'Fmaj7', frets: [-1, -1, 3, 2, 1, 0], fingers: [0, 0, 3, 2, 1, 0] },
   'Gmaj7': { chord: 'Gmaj7', frets: [3, 2, 0, 0, 0, 2], fingers: [2, 1, 0, 0, 0, 3] },
   'Amaj7': { chord: 'Amaj7', frets: [-1, 0, 2, 1, 2, 0], fingers: [0, 0, 2, 1, 3, 0] },
+  'Bbmaj7': { chord: 'Bbmaj7', frets: [-1, 1, 3, 2, 3, 1], fingers: [0, 1, 3, 2, 4, 1], barres: [1] },
 
   // Sus & Add
   'Csus4': { chord: 'Csus4', frets: [-1, 3, 3, 0, 1, 1], fingers: [0, 3, 4, 0, 1, 1] },
   'Dsus4': { chord: 'Dsus4', frets: [-1, -1, 0, 2, 3, 3], fingers: [0, 0, 0, 1, 2, 4] },
+  'Dsus': { chord: 'Dsus', frets: [-1, -1, 0, 2, 3, 3], fingers: [0, 0, 0, 1, 2, 4] },
   'Gsus4': { chord: 'Gsus4', frets: [3, 3, 0, 0, 1, 3], fingers: [2, 3, 0, 0, 1, 4] },
+  'Gsus': { chord: 'Gsus', frets: [3, 3, 0, 0, 1, 3], fingers: [2, 3, 0, 0, 1, 4] },
   'Asus4': { chord: 'Asus4', frets: [-1, 0, 2, 2, 3, 0], fingers: [0, 0, 1, 2, 3, 0] },
   'Cadd9': { chord: 'Cadd9', frets: [-1, 3, 2, 0, 3, 3], fingers: [0, 2, 1, 0, 3, 4] },
   'Dsus2': { chord: 'Dsus2', frets: [-1, -1, 0, 2, 3, 0], fingers: [0, 0, 0, 1, 3, 0] },
@@ -59,7 +63,9 @@ export const GUITAR_CHORDS: Record<string, GuitarChordData> = {
   // Flats / Sharps Common
   'Bb': { chord: 'Bb', frets: [-1, 1, 3, 3, 3, 1], barres: [1] },
   'Bbm': { chord: 'Bbm', frets: [-1, 1, 3, 3, 2, 1], barres: [1] },
+  'Cm7': { chord: 'Cm7', frets: [-1, 3, 5, 3, 4, 3], barres: [3] },
   'Eb': { chord: 'Eb', frets: [-1, -1, 1, 3, 4, 3], fingers: [0, 0, 1, 2, 4, 3] },
+  'Eb7': { chord: 'Eb7', frets: [-1, -1, 1, 3, 2, 3], fingers: [0, 0, 1, 3, 2, 4] },
   'Ab': { chord: 'Ab', frets: [4, 6, 6, 5, 4, 4], barres: [4] },
   'Db': { chord: 'Db', frets: [-1, 4, 6, 6, 6, 4], barres: [4] },
   'F#': { chord: 'F#', frets: [2, 4, 4, 3, 2, 2], barres: [2] }
@@ -89,7 +95,10 @@ export const UKULELE_CHORDS: Record<string, UkuleleChordData> = {
   'Gmaj7': { chord: 'Gmaj7', frets: [0, 2, 2, 2], fingers: [0, 1, 2, 3] },
   'Dmaj7': { chord: 'Dmaj7', frets: [2, 1, 2, 0], fingers: [2, 1, 3, 0] },
   'Amaj7': { chord: 'Amaj7', frets: [1, 1, 0, 0], fingers: [1, 2, 0, 0] },
-  'Fmaj7': { chord: 'Fmaj7', frets: [2, 4, 1, 0], fingers: [2, 4, 1, 0] }
+  'Fmaj7': { chord: 'Fmaj7', frets: [2, 4, 1, 0], fingers: [2, 4, 1, 0] },
+  'Eb': { chord: 'Eb', frets: [0, 3, 3, 1], fingers: [0, 2, 3, 1] },
+  'Ebmaj7': { chord: 'Ebmaj7', frets: [3, 3, 3, 5], fingers: [1, 1, 1, 3] },
+  'Bbmaj7': { chord: 'Bbmaj7', frets: [3, 2, 1, 0], fingers: [3, 2, 1, 0] }
 };
 
 // Piano chord notes mapping (Semitone offsets from C4 = 60)

@@ -27,16 +27,16 @@ export const KEY_ENHARMONICS: Record<string, string[]> = {
   'Bbm': ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'],
 
   // Sharp major keys (คีย์เมเจอร์ที่มี #)
-  'G':   ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'Bb', 'B'],
-  'D':   ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'Bb', 'B'],
-  'A':   ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'],
+  'G':   ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'G#', 'A', 'Bb', 'B'],
+  'D':   ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'G#', 'A', 'Bb', 'B'],
+  'A':   ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'],
   'E':   ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'],
   'B':   ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'],
   'F#':  ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'],
   'C#':  ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'],
 
   // Sharp minor keys (คีย์ไมเนอร์ที่มี #)
-  'Em':  ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'Bb', 'B'],
+  'Em':  ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'G#', 'A', 'Bb', 'B'],
   'Bm':  ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'],
   'F#m': ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'],
   'C#m': ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'],
@@ -105,7 +105,7 @@ export function transposeSingleNote(note: string, semitones: number, key = 'C'):
   return scale[newIndex];
 }
 
-// จัดรูปแบบคอร์ดให้ถูกต้องตามคีย์ (เช่น คีย์ F เปลี่ยน A# เป็น Bb, คีย์ D เปลี่ยน Gbm เป็น F#m)
+// จัดรูปแบบคอร์ดให้ถูกต้องตามคีย์ (เช่น คีย์ F เปลี่ยน A# เป็น Bb, คีย์ D เปลี่ยน Gbm เป็น F#m, D#maj7 เป็น Ebmaj7)
 export function formatChordForKey(chord: string, key = 'C'): string {
   return transposeNote(chord, 0, key);
 }
@@ -119,14 +119,42 @@ export function transposeNote(chord: string, semitones: number, targetKey = 'C')
   if (!rootMatch) return chord;
 
   const [, rootNote, quality] = rootMatch;
-  const transposedRoot = transposeSingleNote(rootNote, semitones, targetKey);
+  let transposedRoot = transposeSingleNote(rootNote, semitones, targetKey);
+
+  // Enharmonic rules for standard chord notation in songs:
+  // ดักจับคอร์ดและปรับการสะกดให้ตรงตามมาตรฐานสากล:
+  const isMinor = /^m(?!aj)/i.test(quality) || quality.startsWith('min');
+  const isDim = quality.startsWith('dim') || quality.startsWith('o');
+
+  // 1. D#maj7, D#, D#7, D#sus, D#add -> Ebmaj7, Eb, Eb7, Ebsus (คอร์ดเมเจอร์และ maj7 ของโน้ต Eb/D# ต้องแสดงเป็น Eb เสมอ)
+  if ((transposedRoot === 'D#' || transposedRoot === 'Eb') && !isMinor && !isDim) {
+    transposedRoot = 'Eb';
+  }
+  // 2. A#maj7, A#, A#7, A#sus, A#add -> Bbmaj7, Bb, Bb7, Bbsus (คอร์ดเมเจอร์และ maj7 ของโน้ต Bb/A# ต้องแสดงเป็น Bb เสมอ)
+  else if ((transposedRoot === 'A#' || transposedRoot === 'Bb') && !isMinor && !isDim) {
+    transposedRoot = 'Bb';
+  }
+  // 3. Gbm, Gbm7 -> F#m, F#m7 (คอร์ดไมเนอร์ต้องเป็น F#m ไม่ใช้ Gbm)
+  else if ((transposedRoot === 'Gb' || transposedRoot === 'F#') && isMinor) {
+    transposedRoot = 'F#';
+  }
+  // 4. Dbm, Dbm7 -> C#m, C#m7 (คอร์ดไมเนอร์ต้องเป็น C#m ไม่ใช้ Dbm)
+  else if ((transposedRoot === 'Db' || transposedRoot === 'C#') && isMinor) {
+    transposedRoot = 'C#';
+  }
+  // 5. Abm, Abm7 -> G#m, G#m7 (คอร์ดไมเนอร์ต้องเป็น G#m ไม่ใช้ Abm)
+  else if ((transposedRoot === 'Ab' || transposedRoot === 'G#') && isMinor) {
+    transposedRoot = 'G#';
+  }
+
   let result = transposedRoot + quality;
 
   if (parts.length > 1) {
     const bassMatch = parts[1].match(/^([A-Ga-g][#b]?)(.*)$/);
     if (bassMatch) {
       const [, bassNote, bassQuality] = bassMatch;
-      const transposedBass = transposeSingleNote(bassNote, semitones, targetKey);
+      let transposedBass = transposeSingleNote(bassNote, semitones, targetKey);
+      if (transposedBass === 'A#') transposedBass = 'Bb';
       result += '/' + transposedBass + bassQuality;
     } else {
       result += '/' + parts[1];

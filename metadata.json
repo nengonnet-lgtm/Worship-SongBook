@@ -1,0 +1,6 @@
+{
+  "name": "Worship SongBook",
+  "description": "Professional chord chart and lyrics manager for musicians, worship leaders, and stage performers. Featuring real-time transposition, ChordPro support, auto-scroll, metronome, chord diagrams, setlists, and stage performance mode.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

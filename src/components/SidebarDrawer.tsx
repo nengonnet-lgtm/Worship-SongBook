@@ -130,10 +130,6 @@ export const SidebarDrawer: React.FC<Props> = ({
             </span>
           </button>
 
-          <div className="pt-2 px-1">
-            <PWAInstallButton variant="full" />
-          </div>
-
           <div className="pt-3 pb-1 px-3 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">
             Tools & Practice
           </div>
@@ -241,8 +237,13 @@ export const SidebarDrawer: React.FC<Props> = ({
           </div>
         </div>
 
+        {/* Bottom PWA Install Button */}
+        <div className="p-3 border-t border-neutral-800 bg-neutral-950/80">
+          <PWAInstallButton variant="full" />
+        </div>
+
         {/* Footer info */}
-        <div className="p-4 border-t border-neutral-800 bg-neutral-950/60 text-xs text-neutral-500 flex items-center justify-between">
+        <div className="px-4 py-3 border-t border-neutral-900 bg-neutral-950/90 text-xs text-neutral-500 flex items-center justify-between">
           <span>Worship SongBook v1.0</span>
           <span>Offline Ready</span>
         </div>

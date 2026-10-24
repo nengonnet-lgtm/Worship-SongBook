@@ -13,6 +13,7 @@ import {
   ShieldAlert
 } from 'lucide-react';
 import { AppSettings, AppTheme, InstrumentType } from '../types/song';
+import { PWAInstallButton } from './PWAInstallButton';
 
 interface Props {
   isOpen: boolean;
@@ -128,6 +129,10 @@ export const SidebarDrawer: React.FC<Props> = ({
               {setlistCount}
             </span>
           </button>
+
+          <div className="pt-2 px-1">
+            <PWAInstallButton variant="full" />
+          </div>
 
           <div className="pt-3 pb-1 px-3 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">
             Tools & Practice

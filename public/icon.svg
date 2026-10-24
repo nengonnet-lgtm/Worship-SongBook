@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#18181b"/>
+      <stop offset="100%" stop-color="#09090b"/>
+    </linearGradient>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fbbf24"/>
+      <stop offset="100%" stop-color="#d97706"/>
+    </linearGradient>
+    <linearGradient id="pageGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.12"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0.04"/>
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="12" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+  </defs>
+
+  <!-- Background rounded rect -->
+  <rect width="512" height="512" rx="112" fill="url(#bgGrad)"/>
+  <rect width="504" height="504" x="4" y="4" rx="108" fill="none" stroke="#27272a" stroke-width="4"/>
+
+  <!-- Open Book Silhouette -->
+  <path d="M128 356 C180 340, 220 346, 256 366 C292 346, 332 340, 384 356 L384 212 C332 198, 292 204, 256 224 C220 204, 180 198, 128 212 Z" fill="url(#pageGrad)" stroke="#52525b" stroke-width="3" stroke-linejoin="round"/>
+  <!-- Book spine line -->
+  <line x1="256" y1="224" x2="256" y2="366" stroke="#fbbf24" stroke-width="4" stroke-linecap="round"/>
+
+  <!-- Beamed Music Notes in Gold -->
+  <g filter="url(#glow)">
+    <!-- Note Stem 1 -->
+    <rect x="194" y="160" width="14" height="110" rx="7" fill="url(#goldGrad)" />
+    <!-- Note Stem 2 -->
+    <rect x="296" y="126" width="14" height="144" rx="7" fill="url(#goldGrad)" />
+    <!-- Beam -->
+    <polygon points="194,172 310,138 310,118 194,152" fill="url(#goldGrad)"/>
+    <!-- Note Head 1 -->
+    <ellipse cx="180" cy="274" rx="28" ry="20" transform="rotate(-25 180 274)" fill="url(#goldGrad)" />
+    <!-- Note Head 2 -->
+    <ellipse cx="282" cy="270" rx="28" ry="20" transform="rotate(-25 282 270)" fill="url(#goldGrad)" />
+  </g>
+
+  <!-- Musical Chord / Cross Accent -->
+  <circle cx="372" cy="120" r="14" fill="#fbbf24" opacity="0.9"/>
+  <path d="M372 96 L372 144 M348 120 L396 120" stroke="#09090b" stroke-width="5" stroke-linecap="round"/>
+</svg>

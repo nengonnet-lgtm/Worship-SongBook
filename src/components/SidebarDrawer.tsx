@@ -83,11 +83,11 @@ export const SidebarDrawer: React.FC<Props> = ({
               onSelectTab('library');
               onClose();
             }}
-            className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl transition-all cursor-pointer ${
-              activeTab === 'library'
-                ? 'bg-amber-400 text-neutral-950 font-bold shadow-sm'
-                : 'text-neutral-300 hover:bg-neutral-800'
-            }`}
+            className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl border transition-all cursor-pointer ${
+			activeTab === 'library'
+			? 'bg-amber-400 text-neutral-950 font-bold shadow-sm border-amber-400' // ขอบสีเดียวกับพื้นหลังเมื่อเลือก
+			: 'text-neutral-300 hover:bg-sky-700 border-amber-400/80'       // ขอบสีเทาจางๆ เมื่อไม่ได้เลือก
+			}`}
           >
             <div className="flex items-center gap-3">
               <Music className="w-4 h-4" />
@@ -109,11 +109,11 @@ export const SidebarDrawer: React.FC<Props> = ({
               onSelectTab('setlists');
               onClose();
             }}
-            className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl transition-all cursor-pointer ${
-              activeTab === 'setlists'
-                ? 'bg-amber-400 text-neutral-950 font-bold shadow-sm'
-                : 'text-neutral-300 hover:bg-neutral-800'
-            }`}
+            className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl border transition-all cursor-pointer ${
+			activeTab === 'setlists'
+			? 'bg-amber-400 text-neutral-950 font-bold shadow-sm border-amber-400' // ขอบสีเดียวกับพื้นหลังเมื่อเลือก
+			: 'text-neutral-300 hover:bg-sky-700 border-amber-400/80'       // ขอบสีเทาจางๆ เมื่อไม่ได้เลือก
+			}`}
           >
             <div className="flex items-center gap-3">
               <ListMusic className="w-4 h-4" />

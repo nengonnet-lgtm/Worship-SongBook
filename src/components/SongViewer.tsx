@@ -42,8 +42,9 @@ interface Props {
   isEmbedded?: boolean;
 }
 
-// Helper คำนวณความกว้างที่แท้จริงของอักขระภาษาไทย (ตัดสระบน/ล่าง และวรรณยุกต์ออก)
+// Helper คำนวณความกว้างที่แท้จริงของอักขระภาษาไทย (ตัดสระบน/ล่าง และวรรณยุกต์ออกทั้งหมด)
 const getThaiVisualLength = (str: string): number => {
+  if (!str) return 0;
   const THAI_NON_SPACING_REGEX = /[\u0E31\u0E34-\u0E3A\u0E47-\u0E4E]/g;
   return str.replace(THAI_NON_SPACING_REGEX, '').length;
 };
@@ -394,7 +395,7 @@ export const SongViewer: React.FC<Props> = ({
         </div>
       )}
 
-      {/* MAIN DISPLAY AREA (TEXTAREA-MATCHED 2-LINE MONOSPACE RENDER) */}
+      {/* MAIN DISPLAY AREA (PURE MONOSPACE TEXT RENDER FOR COMPATIBILITY) */}
       <div
         ref={scrollContainerRef}
         className="flex-1 overflow-y-auto px-4 sm:px-8 md:px-12 py-6"
@@ -403,7 +404,10 @@ export const SongViewer: React.FC<Props> = ({
           lineHeight: 1.6,
           fontFamily: "'Courier New', Courier, 'JetBrains Mono', monospace",
           letterSpacing: '0px',
-          tabSize: 4
+          wordSpacing: '0px',
+          tabSize: 4,
+          WebkitTextSizeAdjust: '100%',
+          fontVariantLigatures: 'none'
         }}
       >
         <div className={`max-w-5xl mx-auto ${settings.columns === 2 ? 'grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-6' : 'space-y-6'}`}>
@@ -428,7 +432,7 @@ export const SongViewer: React.FC<Props> = ({
                     );
                   }
 
-                  // 1. บรรทัดที่เป็นคอร์ดล้วน
+                  // 1. บรรทัดคอร์ดล้วน
                   if (line.isChordOnly) {
                     let chordOnlyStr = '';
                     let currentPos = 0;
@@ -450,7 +454,7 @@ export const SongViewer: React.FC<Props> = ({
                     );
                   }
 
-                  // 2. บรรทัดที่มีทั้งคอร์ดและเนื้อเพลง (สร้าง Plain Text 2 บรรทัดเป๊ะตาม Textarea)
+                  // 2. บรรทัดที่มีทั้งคอร์ดและเนื้อเพลง
                   let chordLineStr = '';
                   let lyricLineStr = '';
                   let currentPos = 0;

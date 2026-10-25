@@ -23,6 +23,13 @@ interface Props {
   onClose: () => void;
 }
 
+// Helper คำนวณความกว้างอักขระภาษาไทย (ตัดสระบน/ล่าง และวรรณยุกต์ออกทั้งหมด)
+const getThaiVisualLength = (str: string): number => {
+  if (!str) return 0;
+  const THAI_NON_SPACING_REGEX = /[\u0E31\u0E34-\u0E3A\u0E47-\u0E4E]/g;
+  return str.replace(THAI_NON_SPACING_REGEX, '').length;
+};
+
 export const SongEditorModal: React.FC<Props> = ({
   song,
   settings,
@@ -50,7 +57,6 @@ export const SongEditorModal: React.FC<Props> = ({
   const [pasteConvertMode, setPasteConvertMode] = useState<'chordpro' | 'raw'>('chordpro');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Quick insertion helper
   const insertTextAtCursor = (textToInsert: string) => {
     const textarea = textareaRef.current;
     if (!textarea) return;
@@ -204,7 +210,7 @@ export const SongEditorModal: React.FC<Props> = ({
           </div>
         </div>
 
-        {/* 1. Metadata Inputs Bar */}
+        {/* Metadata Inputs Bar */}
         <div className="px-6 py-2 border-b border-neutral-800 bg-neutral-950/40 text-xs shrink-0 space-y-2">
           <div className="grid grid-cols-2 sm:grid-cols-12 gap-2 items-center">
             <div className="sm:col-span-4">
@@ -261,7 +267,6 @@ export const SongEditorModal: React.FC<Props> = ({
             </div>
           </div>
 
-          {/* ข้อมูลเสริม (Capo, Tags, Notes) */}
           {showMoreMeta && (
             <div className="grid grid-cols-1 sm:grid-cols-6 gap-2 pt-2 border-t border-neutral-800/60 animate-fadeIn">
               <div>
@@ -295,7 +300,7 @@ export const SongEditorModal: React.FC<Props> = ({
           )}
         </div>
 
-        {/* 2. Compact Toolbar */}
+        {/* Toolbar */}
         <div className="flex items-center justify-between px-6 py-1.5 border-b border-neutral-800 bg-neutral-950/70 text-xs shrink-0 gap-3">
           <div className="flex items-center gap-1.5 shrink-0">
             <button
@@ -343,7 +348,7 @@ export const SongEditorModal: React.FC<Props> = ({
 
         {/* Editor & Preview Area */}
         <div className="flex-1 flex min-h-0 overflow-hidden">
-          {/* ChordPro Editor Textarea */}
+          {/* Textarea Editor */}
           {(activeTab === 'editor' || activeTab === 'split') && (
             <div className={`flex flex-col h-full ${activeTab === 'split' ? 'w-1/2 border-r border-neutral-800' : 'w-full'}`}>
               <div className="px-4 py-1.5 text-[11px] font-mono text-neutral-400 bg-neutral-900/90 border-b border-neutral-800 flex justify-between items-center">
@@ -357,96 +362,110 @@ export const SongEditorModal: React.FC<Props> = ({
                 onChange={(e) => setChordProContent(e.target.value)}
                 placeholder={`ตัวอย่างแบบ 2 บรรทัด:\n        D     Bm       G \nความรักมั่นคงของพระเจ้า ไม่เคยยั้งหยุด\n\nหรือพิมพ์แบบ ChordPro:\nความรักมั่น[D]คงของพระ[Bm]เจ้า ไม่เคยยั้ง[G]หยุด`}
                 spellCheck={false}
-                className="flex-1 w-full p-4 bg-neutral-950 font-mono text-sm leading-relaxed text-neutral-200 resize-none focus:outline-none focus:ring-0"
+                style={{
+                  fontFamily: "'Courier New', Courier, 'JetBrains Mono', monospace",
+                  letterSpacing: '0px',
+                  wordSpacing: '0px',
+                  tabSize: 4,
+                  WebkitTextSizeAdjust: '100%',
+                  fontVariantLigatures: 'none'
+                }}
+                className="flex-1 w-full p-4 bg-neutral-950 font-mono text-sm leading-relaxed text-neutral-200 resize-none focus:outline-none whitespace-pre"
               />
             </div>
           )}
 
-          {/* Live Preview Panel */}
-{/* Live Preview Panel ใน SongEditorModal.tsx */}
-{(activeTab === 'preview' || activeTab === 'split') && (
-  <div className={`flex flex-col h-full overflow-y-auto p-6 ${
-    settings.theme === 'light' ? 'bg-white text-slate-900' : 'bg-neutral-950 text-neutral-100'
-  } ${activeTab === 'split' ? 'w-1/2' : 'w-full'}`}>
-    <div className="mb-3 pb-2 border-b border-neutral-800">
-      <span className="text-[10px] font-semibold uppercase tracking-widest font-mono text-neutral-400">
-        Live Stage Preview
-      </span>
-      <h2 className="text-base font-bold text-neutral-100">{title}</h2>
-    </div>
-
-    <div
-      className="space-y-6 font-mono text-sm leading-tight"
-      style={{
-        fontFamily: "'Courier New', Courier, 'JetBrains Mono', monospace",
-        letterSpacing: '0px'
-      }}
-    >
-      {previewParsed.sections.map((section, sIdx) => (
-        <div key={sIdx} className="space-y-3">
-          {section.title && (
-            <span className="text-xs font-bold font-mono uppercase tracking-wider block text-amber-400">
-              {section.title}
-            </span>
-          )}
-
-          {section.lines.map((line, lIdx) => {
-            if (line.type === 'empty') return <div key={lIdx} className="h-3" />;
-            if (line.type === 'comment') {
-              return (
-                <div key={lIdx} className="text-xs italic text-neutral-400">
-                  {line.comment}
-                </div>
-              );
-            }
-
-            // คำนวณ Plain Text 2 บรรทัดสำหรับ Preview
-            let chordLineStr = '';
-            let lyricLineStr = '';
-            let currentPos = 0;
-
-            const THAI_NON_SPACING_REGEX = /[\u0E31\u0E34-\u0E3A\u0E47-\u0E4E]/g;
-            const getVisualLen = (str: string) => str.replace(THAI_NON_SPACING_REGEX, '').length;
-
-            line.items?.forEach((item) => {
-              const chord = item.chord || '';
-              const lyric = item.lyric || '';
-
-              if (chord) {
-                const padding = Math.max(0, currentPos - getVisualLen(chordLineStr));
-                chordLineStr += ' '.repeat(padding) + chord;
-              }
-
-              lyricLineStr += lyric;
-
-              const chordVisLen = chord ? getVisualLen(chord) : 0;
-              const lyricVisLen = getVisualLen(lyric);
-              currentPos += Math.max(chordVisLen, lyricVisLen);
-            });
-
-            return (
-              <div key={lIdx} className="font-mono leading-tight select-none mb-3">
-                {/* บรรทัดคอร์ด */}
-                {chordLineStr.trim() && (
-                  <div
-                    className="whitespace-pre font-bold block"
-                    style={{ color: settings.chordsColor || '#38bdf8' }}
-                  >
-                    {chordLineStr}
-                  </div>
-                )}
-                {/* บรรทัดเนื้อเพลง */}
-                <div className="whitespace-pre block text-neutral-200">
-                  {lyricLineStr}
+          {/* Live Stage Preview Panel */}
+          {(activeTab === 'preview' || activeTab === 'split') && (
+            <div className={`flex flex-col h-full overflow-y-auto p-6 ${
+              settings.theme === 'light' ? 'bg-white text-slate-900' : 'bg-neutral-950 text-neutral-100'
+            } ${activeTab === 'split' ? 'w-1/2' : 'w-full'}`}>
+              <div className={`mb-3 pb-2 border-b ${settings.theme === 'light' ? 'border-blue-100' : 'border-neutral-800'}`}>
+                <span className={`text-[10px] font-semibold uppercase tracking-widest font-mono ${
+                  settings.theme === 'light' ? 'text-blue-700' : 'text-neutral-400'
+                }`}>
+                  Live Stage Preview
+                </span>
+                <h2 className={`text-base font-bold ${settings.theme === 'light' ? 'text-slate-950' : 'text-neutral-100'}`}>{title}</h2>
+                <div className={`text-xs ${settings.theme === 'light' ? 'text-slate-500' : 'text-neutral-400'}`}>
+                  {artist} · Key: <span className={`font-bold ${settings.theme === 'light' ? 'text-blue-700' : 'text-amber-400'}`}>{key}</span> · {tempo} BPM
                 </div>
               </div>
-            );
-          })}
-        </div>
-      ))}
-    </div>
-  </div>
-)}
+
+              <div
+                className="space-y-6 font-mono text-sm leading-tight"
+                style={{
+                  fontFamily: "'Courier New', Courier, 'JetBrains Mono', monospace",
+                  letterSpacing: '0px',
+                  wordSpacing: '0px',
+                  tabSize: 4,
+                  WebkitTextSizeAdjust: '100%',
+                  fontVariantLigatures: 'none'
+                }}
+              >
+                {previewParsed.sections.map((section, sIdx) => (
+                  <div key={sIdx} className="space-y-3">
+                    {section.title && (
+                      <span className={`text-xs font-bold font-mono uppercase tracking-wider block ${
+                        settings.theme === 'light' ? 'text-blue-700' : 'text-amber-400'
+                      }`}>
+                        {section.title}
+                      </span>
+                    )}
+
+                    {section.lines.map((line, lIdx) => {
+                      if (line.type === 'empty') return <div key={lIdx} className="h-3" />;
+                      if (line.type === 'comment') {
+                        return (
+                          <div key={lIdx} className="text-xs italic text-neutral-400">
+                            {line.comment}
+                          </div>
+                        );
+                      }
+
+                      let chordLineStr = '';
+                      let lyricLineStr = '';
+                      let currentPos = 0;
+
+                      line.items?.forEach((item) => {
+                        const chord = item.chord || '';
+                        const lyric = item.lyric || '';
+
+                        if (chord) {
+                          const padding = Math.max(0, currentPos - getThaiVisualLength(chordLineStr));
+                          chordLineStr += ' '.repeat(padding) + chord;
+                        }
+
+                        lyricLineStr += lyric;
+
+                        const chordVisLen = chord ? getThaiVisualLength(chord) : 0;
+                        const lyricVisLen = getThaiVisualLength(lyric);
+                        currentPos += Math.max(chordVisLen, lyricVisLen);
+                      });
+
+                      return (
+                        <div key={lIdx} className="font-mono leading-tight select-none mb-3 tracking-normal">
+                          {/* บรรทัดคอร์ด */}
+                          {chordLineStr.trim() && (
+                            <div
+                              className="whitespace-pre font-bold block"
+                              style={{ color: settings.theme === 'light' ? '#1d4ed8' : (settings.chordsColor || '#38bdf8') }}
+                            >
+                              {chordLineStr}
+                            </div>
+                          )}
+                          {/* บรรทัดเนื้อเพลง */}
+                          <div className={`whitespace-pre block ${settings.theme === 'light' ? 'text-slate-900 font-medium' : 'text-neutral-200'}`}>
+                            {lyricLineStr}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -469,14 +488,10 @@ export const SongEditorModal: React.FC<Props> = ({
             </div>
 
             <div className="p-4 space-y-3">
-              <p className="text-xs text-neutral-400 leading-relaxed">
-                คัดลอก (Copy) คอร์ดและเนื้อเพลงแบบ 2 บรรทัดจากไฟล์ Word, TXT, หรือเว็บคอร์ดเพลง แล้วนำมาวาง (Paste) ลงในช่องนี้ ระบบจะคำนวณตำแหน่งสระ วรรณยุกต์ และคอร์ดภาษาไทยให้อย่างแม่นยำอัตโนมัติ
-              </p>
-
               <textarea
                 value={pasteInput}
                 onChange={(e) => setPasteInput(e.target.value)}
-                placeholder={`วางข้อความที่นี่ เช่น:\n        D     Bm       G \nความรักมั่นคงของพระเจ้า ไม่เคยยั้งหยุด`}
+                placeholder={`วางข้อความที่นี่...`}
                 rows={9}
                 className="w-full p-3.5 rounded-xl bg-neutral-950 border border-neutral-700 font-mono text-xs sm:text-sm text-neutral-200 resize-none focus:outline-none focus:border-sky-400 leading-relaxed"
               />
@@ -532,3 +547,5 @@ export const SongEditorModal: React.FC<Props> = ({
     </div>
   );
 };
+
+export default SongEditorModal;

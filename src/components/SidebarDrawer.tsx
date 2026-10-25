@@ -24,6 +24,7 @@ interface Props {
   setlistCount: number;
   onOpenChords: () => void;
   onOpenMetronome: () => void;
+  onOpenSettings?: () => void;
   settings: AppSettings;
   onUpdateSettings: (settings: Partial<AppSettings>) => void;
 }
@@ -37,6 +38,7 @@ export const SidebarDrawer: React.FC<Props> = ({
   setlistCount,
   onOpenChords,
   onOpenMetronome,
+  onOpenSettings,
   settings,
   onUpdateSettings
 }) => {
@@ -156,9 +158,36 @@ export const SidebarDrawer: React.FC<Props> = ({
             <span>Stage Metronome</span>
           </button>
 
+          {onOpenSettings && (
+            <button
+              onClick={() => {
+                onClose();
+                onOpenSettings();
+              }}
+              className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-neutral-300 hover:bg-neutral-800 transition-colors cursor-pointer"
+            >
+              <div className="flex items-center gap-3">
+                <SettingsIcon className="w-4 h-4 text-amber-400" />
+                <span>การตั้งค่าระบบ (Settings)</span>
+              </div>
+              <span className="text-[10px] text-neutral-500 font-mono">ปรับแต่ง</span>
+            </button>
+          )}
+
           {/* Settings Section */}
-          <div className="pt-4 pb-1 px-3 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">
-            Display & Stage Mode
+          <div className="pt-4 pb-1 px-3 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider flex items-center justify-between">
+            <span>Display & Stage Mode</span>
+            {onOpenSettings && (
+              <button
+                onClick={() => {
+                  onClose();
+                  onOpenSettings();
+                }}
+                className="text-amber-400 hover:underline text-[11px] font-semibold cursor-pointer"
+              >
+                ตั้งค่าทั้งหมด
+              </button>
+            )}
           </div>
 
           <div className="px-3 py-2 space-y-3 bg-neutral-950/40 rounded-xl border border-neutral-800/80">

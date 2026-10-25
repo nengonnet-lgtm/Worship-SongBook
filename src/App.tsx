@@ -7,6 +7,7 @@ import { SongViewer } from './components/SongViewer';
 import { SongEditorModal } from './components/SongEditorModal';
 import { SetlistManager } from './components/SetlistManager';
 import { ChordLibraryModal } from './components/ChordLibraryModal';
+import { SettingsModal } from './components/SettingsModal';
 import { MetronomeBar } from './components/MetronomeBar';
 import { OfflineIndicator } from './components/OfflineIndicator';
 import { X } from 'lucide-react';
@@ -92,6 +93,7 @@ export default function App() {
   const [editingSong, setEditingSong] = useState<Song | null | 'new'>(null);
   const [showChordLibrary, setShowChordLibrary] = useState(false);
   const [showFloatingMetronome, setShowFloatingMetronome] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
 
   // Sync to localStorage
   useEffect(() => {
@@ -506,6 +508,7 @@ export default function App() {
         setlistCount={setlists.length}
         onOpenChords={() => setShowChordLibrary(true)}
         onOpenMetronome={() => setShowFloatingMetronome(true)}
+        onOpenSettings={() => setShowSettingsModal(true)}
         settings={settings}
         onUpdateSettings={updateSettings}
       />
@@ -581,6 +584,7 @@ export default function App() {
             setlists={setlists}
             settings={settings}
             onOpenMenu={() => setIsSidebarOpen(true)}
+            onOpenSettings={() => setShowSettingsModal(true)}
             onSelectSong={(song) => {
               setSelectedSong(song);
               setActiveSetlistContext(null);
@@ -647,6 +651,15 @@ export default function App() {
           settings={settings}
           onSave={handleSaveSong}
           onClose={() => setEditingSong(null)}
+        />
+      )}
+
+      {showSettingsModal && (
+        <SettingsModal
+          isOpen={showSettingsModal}
+          onClose={() => setShowSettingsModal(false)}
+          settings={settings}
+          onUpdateSettings={updateSettings}
         />
       )}
 

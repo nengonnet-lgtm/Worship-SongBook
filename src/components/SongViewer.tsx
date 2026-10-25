@@ -3,6 +3,7 @@ import { Song, AppSettings } from '../types/song';
 import { parseChordPro } from '../utils/chordProParser';
 import { transposeKey, getSemitonesBetweenKeys } from '../utils/chordUtils';
 import { ChordDiagramVisualizer } from './ChordDiagramVisualizer';
+import { QuickActionsSheet } from './QuickActionsSheet';
 import {
   ChevronLeft,
   ChevronRight,
@@ -82,15 +83,17 @@ export const SongViewer: React.FC<Props> = ({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const viewerContainerRef = useRef<HTMLDivElement>(null);
   const [showQuickSettings, setShowQuickSettings] = useState(false);
+  const [capo, setCapo] = useState<number>(song.capo || 0);
 
   useEffect(() => {
     setTransposeSemitones(computeInitialSemitones());
+    setCapo(song.capo || 0);
     setIsScrolling(false);
     setCountdown(null);
     if (scrollContainerRef.current) {
       scrollContainerRef.current.scrollTop = 0;
     }
-  }, [song.id, effectiveTargetKey, song.key]);
+  }, [song.id, effectiveTargetKey, song.key, song.capo]);
 
   const handleUpdateTranspose = (newSemitones: number) => {
     setTransposeSemitones(newSemitones);
@@ -353,7 +356,14 @@ export const SongViewer: React.FC<Props> = ({
 
           <button
             onClick={() => setShowQuickSettings(!showQuickSettings)}
-            className="p-1.5 rounded-lg border bg-neutral-800 hover:bg-neutral-700 text-neutral-200 border-neutral-700 cursor-pointer"
+            className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
+              showQuickSettings
+                ? 'bg-amber-400 text-neutral-950 border-amber-300'
+                : isLight
+                ? 'bg-white hover:bg-blue-50 text-slate-700 border-slate-200 shadow-xs'
+                : 'bg-neutral-800 hover:bg-neutral-700 text-neutral-200 border-neutral-700'
+            }`}
+            title="Settings (การตั้งค่า / ปรับแต่งการแสดงผล)"
           >
             <Sliders className="w-4 h-4" />
           </button>
@@ -483,6 +493,51 @@ export const SongViewer: React.FC<Props> = ({
           ))}
         </div>
       </div>
+
+      {/* Quick Settings Action Sheet (แผงตั้งค่าการแสดงผล) */}
+      <QuickActionsSheet
+        isOpen={showQuickSettings}
+        onClose={() => setShowQuickSettings(false)}
+        song={song}
+        transposeSemitones={transposeSemitones}
+        onTransposeChange={handleUpdateTranspose}
+        capo={capo}
+        onCapoChange={setCapo}
+        scrollSpeed={settings.autoScrollSpeed || 3}
+        onScrollSpeedChange={(spd) => onUpdateSettings?.({ autoScrollSpeed: spd })}
+        settings={settings}
+        onUpdateSettings={onUpdateSettings || (() => {})}
+        onEditSong={() => {
+          setShowQuickSettings(false);
+          onEditSong?.(song);
+        }}
+        onPrintSong={() => {
+          setShowQuickSettings(false);
+          window.print();
+        }}
+      />
+
+      {/* Chord Diagram Popup */}
+      {activeChordDiagram && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs"
+          onClick={() => setActiveChordDiagram(null)}
+        >
+          <div onClick={(e) => e.stopPropagation()} className="relative">
+            <button
+              onClick={() => setActiveChordDiagram(null)}
+              className="absolute -top-3 -right-3 z-10 w-7 h-7 rounded-full bg-neutral-800 border border-neutral-700 text-neutral-300 hover:text-white flex items-center justify-center shadow-lg cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+            <ChordDiagramVisualizer
+              chord={activeChordDiagram}
+              instrument={settings.instrument || 'guitar'}
+              onClose={() => setActiveChordDiagram(null)}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };

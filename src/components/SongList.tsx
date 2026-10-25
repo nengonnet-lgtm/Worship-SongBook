@@ -16,7 +16,8 @@ import {
   SlidersHorizontal,
   FileCode,
   ChevronDown,
-  Check
+  Check,
+  Settings
 } from 'lucide-react';
 
 import { AppSettings } from '../types/song';
@@ -26,6 +27,7 @@ interface Props {
   setlists: Setlist[];
   settings?: AppSettings;
   onOpenMenu: () => void;
+  onOpenSettings?: () => void;
   onSelectSong: (song: Song) => void;
   onEditSong: (song: Song) => void;
   onDeleteSong: (id: string) => void;
@@ -40,6 +42,7 @@ export const SongList: React.FC<Props> = ({
   setlists,
   settings,
   onOpenMenu,
+  onOpenSettings,
   onSelectSong,
   onEditSong,
   onDeleteSong,
@@ -339,6 +342,24 @@ export const SongList: React.FC<Props> = ({
               </>
             )}
           </div>
+
+          {/* Settings Button */}
+          {onOpenSettings && (
+            <button
+              onClick={onOpenSettings}
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold cursor-pointer border transition-colors ${
+                isLight
+                  ? 'bg-white hover:bg-blue-50 text-blue-900 border-blue-200 shadow-xs'
+                  : isDarkSlate
+                  ? 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700'
+                  : 'bg-neutral-800 hover:bg-neutral-700 text-neutral-300 border-neutral-700'
+              }`}
+              title="Settings (การตั้งค่า)"
+            >
+              <Settings className="w-3.5 h-3.5 text-amber-400" />
+              <span className="hidden lg:inline">Settings</span>
+            </button>
+          )}
 
           {/* Action Button: New Song */}
           <button

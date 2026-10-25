@@ -63,12 +63,12 @@ export const QuickActionsSheet: React.FC<Props> = ({
       />
 
       {/* Slide-in Sheet */}
-      <div className={`relative w-84 sm:w-96 h-full flex flex-col shadow-2xl z-10 overflow-hidden ${sheetBg}`}>
+      <div className={`relative w-76 sm:w-84 h-full flex flex-col shadow-2xl z-10 overflow-hidden ${sheetBg}`}>
         {/* Header */}
-        <div className={`p-4 flex items-center justify-between ${headerBg}`}>
+        <div className={`px-4 py-3 flex items-center justify-between ${headerBg}`}>
           <div className="flex items-center gap-2">
             <Sliders className={`w-4 h-4 ${isLight ? 'text-blue-700' : isDarkSlate ? 'text-sky-400' : 'text-amber-400'}`} />
-            <h3 className="font-bold text-base tracking-tight">Quick Actions</h3>
+            <h3 className="font-bold text-sm tracking-tight">คอร์ด & ควบคุม (Quick Actions)</h3>
           </div>
 
           <button
@@ -77,12 +77,12 @@ export const QuickActionsSheet: React.FC<Props> = ({
               isLight ? 'text-neutral-500 hover:bg-neutral-200' : isDarkSlate ? 'text-slate-400 hover:bg-slate-700 hover:text-white' : 'text-neutral-400 hover:text-neutral-100 hover:bg-neutral-800'
             }`}
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Content Controls */}
-        <div className="flex-1 overflow-y-auto p-5 space-y-6 text-sm">
+        <div className="flex-1 overflow-y-auto px-4 py-3 space-y-4 text-xs">
           {/* Transposition */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">

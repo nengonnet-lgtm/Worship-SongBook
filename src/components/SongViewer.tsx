@@ -43,12 +43,7 @@ interface Props {
   isEmbedded?: boolean;
 }
 
-// Helper คำนวณความกว้างที่แท้จริงของอักขระภาษาไทย (ตัดสระบน/ล่าง และวรรณยุกต์ออกทั้งหมด)
-const getThaiVisualLength = (str: string): number => {
-  if (!str) return 0;
-  const THAI_NON_SPACING_REGEX = /[\u0E31\u0E34-\u0E3A\u0E47-\u0E4E]/g;
-  return str.replace(THAI_NON_SPACING_REGEX, '').length;
-};
+import { getThaiVisualLength } from '../utils/thaiText';
 
 export const SongViewer: React.FC<Props> = ({
   song,
@@ -412,12 +407,13 @@ export const SongViewer: React.FC<Props> = ({
         style={{
           fontSize: `${settings.fontSize || 16}px`,
           lineHeight: 1.6,
-          fontFamily: "'JetBrains Mono', 'Sarabun', 'Courier Prime', monospace",
+          fontFamily: "'JetBrains Mono', 'Sarabun', 'Thonburi', 'Sukhumvit Set', -apple-system, BlinkMacSystemFont, monospace, sans-serif",
           letterSpacing: '0px',
           wordSpacing: '0px',
           tabSize: 4,
           WebkitTextSizeAdjust: '100%',
-          fontVariantLigatures: 'none'
+          fontVariantLigatures: 'normal',
+          fontFeatureSettings: '"liga" 1, "calt" 1, "ccmp" 1'
         }}
       >
         <div className={`max-w-5xl mx-auto ${settings.columns === 2 ? 'grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-6' : 'space-y-6'}`}>

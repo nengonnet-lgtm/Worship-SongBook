@@ -178,7 +178,13 @@ export function getSemitonesBetweenKeys(fromKey: string, toKey: string): number 
   return diff;
 }
 
-const THAI_NON_SPACING_REGEX = /[\u0E31\u0E34-\u0E3A\u0E47-\u0E4E]/g;
+import {
+  normalizeThaiText,
+  fixThaiChordProGraphemes,
+  THAI_COMBINING_REGEX,
+  THAI_COMBINING_GLOBAL_REGEX
+} from './thaiText';
+
 export const CHORD_REGEX = /^[A-G][#b]?(?:maj|min|m|M|dim|aug|sus|add)?(?:[0-9]|b5|#5|b9|#9|#11|b13)*(?:\/[A-G][#b]?)?$/;
 export const CHORD_EXTRACT_REGEX = /(?:^|(?<=[\s|/:,(-]))([A-G][#b]?(?:maj|min|m|M|dim|aug|sus|add)?(?:[0-9]|b5|#5|b9|#9|#11|b13)*(?:\/[A-G][#b]?)?)(?=$|[\s|/:,)-])/g;
 
@@ -232,7 +238,9 @@ export function hasTwoLineChordFormat(text: string): boolean {
 }
 
 export function convertTextToChordPro(text: string): string {
-  const lines = text.split('\n');
+  if (!text) return text;
+  const cleanInput = normalizeThaiText(text);
+  const lines = cleanInput.split('\n');
   const resultLines: string[] = [];
   let inInstrumentalSection = false;
 
@@ -294,29 +302,47 @@ export function convertTextToChordPro(text: string): string {
       }
 
       const lyricLine = nextLine;
+      const normalizedLyric = normalizeThaiText(lyricLine);
       let merged = '';
       let lyricVisualIdx = 0;
       let chordMatchIdx = 0;
       let lastChordEndIdx = 0;
 
-      for (let charIdx = 0; charIdx < lyricLine.length; charIdx++) {
+      for (let charIdx = 0; charIdx < normalizedLyric.length; charIdx++) {
+        const char = normalizedLyric[charIdx];
+        const isCombining = THAI_COMBINING_REGEX.test(char);
+
         while (
           chordMatchIdx < chordMatches.length &&
           chordMatches[chordMatchIdx].index <= lyricVisualIdx
         ) {
           const currentChord = chordMatches[chordMatchIdx];
-          if (chordMatchIdx > 0 && currentChord.index <= lastChordEndIdx) {
-            merged += '  ';
+
+          // ป้องกันไม่ให้คอร์ดแทรกระหว่างพยัญชนะกับสระบน/ล่าง/วรรณยุกต์ (แก้ปัญหาวงกลมไข่ปลาบน iPad)
+          if (isCombining && /[ก-ฮ\u0E24\u0E26]$/.test(merged)) {
+            const lastChar = merged.slice(-1);
+            let prefix = merged.slice(0, -1);
+            if (/[\u0E40-\u0E44]$/.test(prefix)) {
+              const leadingVowel = prefix.slice(-1);
+              prefix = prefix.slice(0, -1);
+              merged = prefix + `[${currentChord.chord}]` + leadingVowel + lastChar;
+            } else {
+              merged = prefix + `[${currentChord.chord}]` + lastChar;
+            }
+          } else {
+            if (chordMatchIdx > 0 && currentChord.index <= lastChordEndIdx && merged.endsWith(']')) {
+              merged += '  ';
+            }
+            merged += `[${currentChord.chord}]`;
           }
-          merged += `[${currentChord.chord}]`;
+
           lastChordEndIdx = currentChord.index + currentChord.chord.length;
           chordMatchIdx++;
         }
 
-        const char = lyricLine[charIdx];
         merged += char;
 
-        if (!char.match(THAI_NON_SPACING_REGEX)) {
+        if (!isCombining) {
           lyricVisualIdx++;
         }
       }
@@ -329,7 +355,7 @@ export function convertTextToChordPro(text: string): string {
         chordMatchIdx++;
       }
 
-      resultLines.push(merged);
+      resultLines.push(fixThaiChordProGraphemes(merged));
       i++;
     } else {
       resultLines.push(currentLine);
@@ -340,7 +366,9 @@ export function convertTextToChordPro(text: string): string {
 }
 
 export function convertChordProTo2LineText(text: string): string {
-  const lines = text.split('\n');
+  if (!text) return text;
+  const cleanInput = fixThaiChordProGraphemes(normalizeThaiText(text));
+  const lines = cleanInput.split('\n');
   const output: string[] = [];
 
   for (const line of lines) {
@@ -361,7 +389,7 @@ export function convertChordProTo2LineText(text: string): string {
       lyricLine += lyricBefore;
 
       for (const char of lyricBefore) {
-        if (!char.match(THAI_NON_SPACING_REGEX)) {
+        if (!THAI_COMBINING_REGEX.test(char)) {
           visualPos++;
         }
       }

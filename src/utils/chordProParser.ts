@@ -1,4 +1,10 @@
 import { transposeNote } from './chordUtils';
+import {
+  normalizeThaiText,
+  fixThaiChordProGraphemes,
+  sanitizeParsedLineItems,
+  THAI_COMBINING_REGEX
+} from './thaiText';
 
 export interface ParsedLineItem {
   lyric: string;
@@ -21,9 +27,6 @@ export interface ParsedSong {
   sections: ParsedSection[];
   allChords: string[];
 }
-
-// เร็กเกกซ์ตรวจหาสระบน-ล่าง และวรรณยุกต์ไทย (ความกว้าง 0 บนหน้าจอ)
-const THAI_NON_SPACING_REGEX = /[\u0E31\u0E34-\u0E3A\u0E47-\u0E4E]/g;
 
 // ตรวจสอบรูปแบบคอร์ดมาตรฐาน เช่น C, Am, F#m, Bb/D, Cmaj7, Gmaj7, Dmaj7, Gsus4
 export const CHORD_REGEX = /^[A-G][#b]?(?:maj|min|m|M|dim|aug|sus|add)?(?:[0-9]|b5|#5|b9|#9|#11|b13)*(?:\/[A-G][#b]?)?$/;
@@ -92,7 +95,9 @@ export function checkIfChordOnly(items: ParsedLineItem[]): boolean {
 
 // ฟังก์ชันแปลงข้อความแบบ 2 บรรทัด (คอร์ดบน-เนื้อล่าง) ให้เป็นรูปแบบ ChordPro [คอร์ด]
 export function convert2LinesToChordPro(text: string): string {
-  const lines = text.split('\n');
+  if (!text) return text;
+  const cleanInput = normalizeThaiText(text);
+  const lines = cleanInput.split('\n');
   const resultLines: string[] = [];
   let inInstrumentalSection = false;
 
@@ -155,54 +160,66 @@ export function convert2LinesToChordPro(text: string): string {
         continue;
       }
 
-      // นำคอร์ดแทรกเข้าไปในบรรทัดเนื้อร้องภาษาไทยโดยรักษาตำแหน่งตัวอักษร
+      // นำคอร์ดแทรกเข้าไปในบรรทัดเนื้อร้องภาษาไทยโดยรักษาตำแหน่งตัวอักษรและไม่ตัดหน่วยอักขระไทย
       const lyricLine = nextLine;
+      const normalizedLyric = normalizeThaiText(lyricLine);
       let merged = '';
       let lyricVisualIdx = 0;
       let chordMatchIdx = 0;
+      let lastChordEndIdx = 0;
 
-      for (let charIdx = 0; charIdx < lyricLine.length; charIdx++) {
+      for (let charIdx = 0; charIdx < normalizedLyric.length; charIdx++) {
+        const char = normalizedLyric[charIdx];
+        const isCombining = THAI_COMBINING_REGEX.test(char);
+
         while (
           chordMatchIdx < chordMatches.length &&
           chordMatches[chordMatchIdx].index <= lyricVisualIdx
         ) {
           const currentChord = chordMatches[chordMatchIdx];
-          if (chordMatchIdx > 0) {
-            const prevChord = chordMatches[chordMatchIdx - 1];
-            const dist = currentChord.index - (prevChord.index + prevChord.chord.length);
-            if (dist > 0 && merged.endsWith(']')) {
-              merged += ' '.repeat(Math.max(1, dist));
+
+          // หากตำแหน่งตัวอักษรปัจจุบันเป็นสระบน/ล่าง หรือวรรณยุกต์ และ merged ลงท้ายด้วยพยัญชนะไทย
+          // ให้ย้ายตำแหน่งคอร์ดไปอยู่ "ก่อนหน้า" พยัญชนะต้น เพื่อไม่ให้แยกพยัญชนะกับสระ/วรรณยุกต์ออกจากกัน
+          if (isCombining && /[ก-ฮ\u0E24\u0E26]$/.test(merged)) {
+            const lastChar = merged.slice(-1);
+            let prefix = merged.slice(0, -1);
+            // หากมีสระหน้านำพยัญชนะนั้นอยู่ เช่น เ แ โ ใ ไ ให้เลื่อนคอร์ดไปหน้าสระหน้าด้วย
+            if (/[\u0E40-\u0E44]$/.test(prefix)) {
+              const leadingVowel = prefix.slice(-1);
+              prefix = prefix.slice(0, -1);
+              merged = prefix + `[${currentChord.chord}]` + leadingVowel + lastChar;
+            } else {
+              merged = prefix + `[${currentChord.chord}]` + lastChar;
             }
+          } else {
+            if (chordMatchIdx > 0 && currentChord.index <= lastChordEndIdx && merged.endsWith(']')) {
+              merged += '  ';
+            }
+            merged += `[${currentChord.chord}]`;
           }
-          merged += `[${currentChord.chord}]`;
+
+          lastChordEndIdx = currentChord.index + currentChord.chord.length;
           chordMatchIdx++;
         }
 
-        const char = lyricLine[charIdx];
         merged += char;
 
         // นับตำแหน่ง Index เฉพาะตัวอักษรหลัก (ไม่นับสระบน-ล่าง/วรรณยุกต์ไทย)
-        if (!char.match(THAI_NON_SPACING_REGEX)) {
+        if (!isCombining) {
           lyricVisualIdx++;
         }
       }
 
-      // หากยังมีคอร์ดเหลืออยู่ที่เกินความยาวเนื้อร้อง (เช่น คอร์ดเล่นต่อเนื่องท้ายท่อน A D หรือ A A7)
+      // หากยังมีคอร์ดเหลืออยู่ที่เกินความยาวเนื้อร้อง
       while (chordMatchIdx < chordMatches.length) {
         const currentChord = chordMatches[chordMatchIdx];
-        if (chordMatchIdx > 0) {
-          const prevChord = chordMatches[chordMatchIdx - 1];
-          const dist = currentChord.index - (prevChord.index + prevChord.chord.length);
-          const spaces = Math.max(2, dist);
-          merged += ' '.repeat(spaces);
-        } else {
-          merged += '  ';
-        }
-        merged += `[${currentChord.chord}]`;
+        const spaceCount = Math.max(2, currentChord.index - lastChordEndIdx);
+        merged += ' '.repeat(spaceCount) + `[${currentChord.chord}]`;
+        lastChordEndIdx = currentChord.index + currentChord.chord.length;
         chordMatchIdx++;
       }
 
-      resultLines.push(merged);
+      resultLines.push(fixThaiChordProGraphemes(merged));
       i++; // ข้ามบรรทัดเนื้อร้องเพราะรวมแล้ว
     } else {
       resultLines.push(currentLine);
@@ -220,8 +237,9 @@ export function parseChordPro(
   notation?: string,
   originalKey?: string
 ): ParsedSong {
-  // แปลงรูปแบบ 2 บรรทัดเป็น ChordPro ก่อน
-  const chordProText = convert2LinesToChordPro(content);
+  // 1. Normalize ภาษาไทย และแปลงรูปแบบ 2 บรรทัดเป็น ChordPro
+  const cleanInput = normalizeThaiText(content || '');
+  const chordProText = fixThaiChordProGraphemes(convert2LinesToChordPro(cleanInput));
 
   const lines = chordProText.split('\n');
   const sections: ParsedSection[] = [];
@@ -233,7 +251,8 @@ export function parseChordPro(
   };
 
   for (const rawLine of lines) {
-    const line = splitGluedChords(rawLine.trimEnd());
+    // ซ่อมแซมหน่วยอักขระไทยในแต่ละบรรทัด
+    const line = fixThaiChordProGraphemes(splitGluedChords(rawLine.trimEnd()));
 
     // 1. Directives เช่น {c: Verse 1}, {c: Intro}, {title: ...}
     if (line.trim().startsWith('{') && line.trim().endsWith('}')) {
@@ -347,11 +366,13 @@ export function parseChordPro(
       items[items.length - 1].lyric += remainingLyric;
     }
 
-    const isChordOnly = checkIfChordOnly(items);
+    // ตรวจสอบและกำจัดปัญหาอักขระลอยตัว (ป้องกันวงกลมไข่ปลาบน iPad/แท็บเล็ต 100%)
+    const sanitizedItems = sanitizeParsedLineItems(items);
+    const isChordOnly = checkIfChordOnly(sanitizedItems);
 
     currentSection.lines.push({
       type: 'lyric',
-      items,
+      items: sanitizedItems,
       isChordOnly
     });
   }

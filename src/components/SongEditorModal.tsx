@@ -6,6 +6,7 @@ import {
   KEYS
 } from '../utils/chordUtils';
 import { parseChordPro } from '../utils/chordProParser';
+import { getThaiVisualLength } from '../utils/thaiText';
 import {
   X,
   Sparkles,
@@ -405,8 +406,7 @@ export const SongEditorModal: React.FC<Props> = ({
             let lyricLineStr = '';
             let currentPos = 0;
 
-            const THAI_NON_SPACING_REGEX = /[\u0E31\u0E34-\u0E3A\u0E47-\u0E4E]/g;
-            const getVisualLen = (str: string) => str.replace(THAI_NON_SPACING_REGEX, '').length;
+            const getVisualLen = (str: string) => getThaiVisualLength(str);
 
             line.items?.forEach((item) => {
               const chord = item.chord || '';

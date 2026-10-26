@@ -13,11 +13,11 @@ import {
   FileText,
   X,
   Menu,
-  SlidersHorizontal,
   FileCode,
   ChevronDown,
   Check,
-  Settings
+  Settings,
+  RotateCcw
 } from 'lucide-react';
 
 import { AppSettings } from '../types/song';
@@ -53,33 +53,28 @@ export const SongList: React.FC<Props> = ({
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedKey, setSelectedKey] = useState<string>('all');
-  const [selectedTag, setSelectedTag] = useState<string>('all');
   const [sortBy, setSortBy] = useState<'title' | 'artist' | 'tempo' | 'recent'>('title');
   const [showFabMenu, setShowFabMenu] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [openSetlistDropdownId, setOpenSetlistDropdownId] = useState<string | null>(null);
 
-  // Extract all unique tags
-  const allTags = useMemo(() => {
-    const set = new Set<string>();
-    songs.forEach((s) => s.tags?.forEach((t) => set.add(t)));
-    return Array.from(set);
-  }, [songs]);
-
   // Filter and sort songs
   const filteredSongs = useMemo(() => {
     return songs
       .filter((song) => {
-        const query = searchQuery.toLowerCase();
+        const query = searchQuery.toLowerCase().trim();
         const matchesSearch =
+          !query ||
           song.title.toLowerCase().includes(query) ||
           song.artist.toLowerCase().includes(query) ||
-          song.chordProContent.toLowerCase().includes(query);
+          song.chordProContent.toLowerCase().includes(query) ||
+          (song.tags && song.tags.some((t) => t.toLowerCase().includes(query))) ||
+          (song.notes && song.notes.toLowerCase().includes(query)) ||
+          song.key.toLowerCase() === query;
 
         const matchesKey = selectedKey === 'all' || song.key === selectedKey;
-        const matchesTag = selectedTag === 'all' || song.tags?.includes(selectedTag);
 
-        return matchesSearch && matchesKey && matchesTag;
+        return matchesSearch && matchesKey;
       })
       .sort((a, b) => {
         if (sortBy === 'title') return a.title.localeCompare(b.title);
@@ -88,7 +83,7 @@ export const SongList: React.FC<Props> = ({
         if (sortBy === 'recent') return b.lastModified - a.lastModified;
         return 0;
       });
-  }, [songs, searchQuery, selectedKey, selectedTag, sortBy]);
+  }, [songs, searchQuery, selectedKey, sortBy]);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -169,26 +164,6 @@ export const SongList: React.FC<Props> = ({
               {filteredSongs.length} of {songs.length} songs
             </span>
           </div>
-        </div>
-
-        {/* Quick Search in Command Bar */}
-        <div className="flex-1 max-w-md mx-2 relative">
-          <Search className={`absolute left-3 top-2.5 w-4 h-4 ${isLight ? 'text-blue-500' : isDarkSlate ? 'text-slate-400' : 'text-neutral-500'}`} />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search titles, artists, lyrics..."
-            className={`w-full pl-9 pr-8 py-1.5 rounded-xl border text-xs sm:text-sm focus:outline-none transition-colors ${searchInputStyle}`}
-          />
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery('')}
-              className={`absolute right-2.5 top-2.5 opacity-60 hover:opacity-100 cursor-pointer ${isLight ? 'text-slate-600' : ''}`}
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
-          )}
         </div>
 
         {/* Top Command Bar Action Buttons */}
@@ -372,72 +347,159 @@ export const SongList: React.FC<Props> = ({
         </div>
       </div>
 
-      {/* Filter Chips Bar (Key, Tags, Sort) */}
-      <div className={`px-4 py-2 border-b flex items-center gap-2 overflow-x-auto text-xs shrink-0 ${filterBarBg}`}>
-        <span
-          className={`text-[11px] font-semibold uppercase tracking-wider shrink-0 ${
-            isLight ? 'text-blue-900 font-bold' : isDarkSlate ? 'text-slate-400' : 'text-neutral-500'
-          }`}
-        >
-          Filter:
-        </span>
+      {/* Dedicated Search & Filter Controls Station */}
+      <div className={`p-3 sm:p-4 border-b flex flex-col gap-3 shrink-0 ${filterBarBg}`}>
+        {/* Primary Search Input Row with Key & Sort dropdowns */}
+        <div className="flex flex-col md:flex-row items-stretch md:items-center gap-2.5">
+          {/* Main Search Bar */}
+          <div className="relative flex-1">
+            <Search
+              className={`absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none transition-colors ${
+                searchQuery
+                  ? isLight
+                    ? 'text-blue-600'
+                    : isDarkSlate
+                    ? 'text-sky-400'
+                    : 'text-amber-400'
+                  : isLight
+                  ? 'text-slate-400'
+                  : 'text-neutral-500'
+              }`}
+            />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') setSearchQuery('');
+              }}
+              placeholder="Search title, artist, or lyrics... (ค้นหาชื่อเพลง, ศิลปิน, หรือเนื้อร้อง)"
+              className={`w-full h-11 pl-10 pr-24 rounded-xl border text-xs sm:text-sm focus:outline-none transition-all shadow-xs ${searchInputStyle}`}
+            />
+            {/* Clear Button & Results Counter Badge */}
+            <div className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className={`p-1 rounded-md opacity-70 hover:opacity-100 transition-opacity cursor-pointer ${
+                    isLight ? 'text-slate-600 hover:bg-slate-200/60' : 'text-neutral-300 hover:bg-neutral-700'
+                  }`}
+                  title="Clear search (ล้างคำค้น - Esc)"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+              <span
+                className={`text-[11px] font-mono font-semibold px-2 py-0.5 rounded-md ${
+                  isLight
+                    ? 'bg-blue-100 text-blue-800'
+                    : isDarkSlate
+                    ? 'bg-slate-800 text-sky-300'
+                    : 'bg-neutral-800 text-amber-400'
+                }`}
+                title="Number of matching songs"
+              >
+                {filteredSongs.length} songs
+              </span>
+            </div>
+          </div>
 
-        {/* Key Picker Filter */}
-        <select
-          value={selectedKey}
-          onChange={(e) => setSelectedKey(e.target.value)}
-          className={`px-2.5 py-1 rounded-lg border text-xs focus:outline-none cursor-pointer shrink-0 ${selectStyle}`}
-        >
-          <option value="all">All Keys</option>
-          {KEYS.map((k) => (
-            <option key={k} value={k}>
-              Key: {k}
-            </option>
-          ))}
-        </select>
+          {/* Quick Selects: Key & Sort */}
+          <div className="flex items-center gap-2 shrink-0">
+            {/* Key Filter Dropdown */}
+            <div className="relative flex-1 md:flex-initial">
+              <select
+                value={selectedKey}
+                onChange={(e) => setSelectedKey(e.target.value)}
+                className={`w-full md:w-auto h-11 px-3 rounded-xl border text-xs sm:text-sm font-medium focus:outline-none cursor-pointer transition-colors shadow-xs ${selectStyle}`}
+                title="Filter by musical key"
+              >
+                <option value="all">Key: All</option>
+                {KEYS.map((k) => (
+                  <option key={k} value={k}>
+                    Key: {k}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-        {/* Tag Filter */}
-        <select
-          value={selectedTag}
-          onChange={(e) => setSelectedTag(e.target.value)}
-          className={`px-2.5 py-1 rounded-lg border text-xs focus:outline-none cursor-pointer shrink-0 ${selectStyle}`}
-        >
-          <option value="all">All Tags</option>
-          {allTags.map((t) => (
-            <option key={t} value={t}>
-              {t}
-            </option>
-          ))}
-        </select>
+            {/* Sort Dropdown */}
+            <div className="relative flex-1 md:flex-initial">
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as any)}
+                className={`w-full md:w-auto h-11 px-3 rounded-xl border text-xs sm:text-sm font-medium focus:outline-none cursor-pointer transition-colors shadow-xs ${selectStyle}`}
+                title="Sort songs"
+              >
+                <option value="title">Sort: Title (A-Z)</option>
+                <option value="artist">Sort: Artist (A-Z)</option>
+                <option value="tempo">Sort: Tempo (BPM)</option>
+                <option value="recent">Sort: Recently Added</option>
+              </select>
+            </div>
 
-        {/* Sort Filter */}
-        <select
-          value={sortBy}
-          onChange={(e) => setSortBy(e.target.value as any)}
-          className={`px-2.5 py-1 rounded-lg border text-xs focus:outline-none cursor-pointer shrink-0 ${selectStyle}`}
-        >
-          <option value="title">Title (A-Z)</option>
-          <option value="artist">Artist (A-Z)</option>
-          <option value="tempo">Tempo (BPM)</option>
-          <option value="recent">Recently Added</option>
-        </select>
+            {/* Reset Active Filters Button */}
+            {(searchQuery || selectedKey !== 'all') && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchQuery('');
+                  setSelectedKey('all');
+                }}
+                className={`h-11 px-3 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shrink-0 shadow-xs ${
+                  isLight
+                    ? 'bg-rose-50 hover:bg-rose-100 text-rose-700 border-rose-200'
+                    : isDarkSlate
+                    ? 'bg-rose-950/40 hover:bg-rose-900/50 text-rose-400 border-rose-800/60'
+                    : 'bg-rose-950/40 hover:bg-rose-900/50 text-rose-400 border-rose-900/60'
+                }`}
+                title="Reset all filters and search"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Reset</span>
+              </button>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Main Song List Table / Rows */}
       <div className={`flex-1 overflow-y-auto divide-y ${divideStyle}`}>
         {filteredSongs.length === 0 ? (
-          <div className="py-20 text-center flex flex-col items-center gap-2">
-            <Music className={`w-12 h-12 ${isLight ? 'text-blue-300' : isDarkSlate ? 'text-slate-600' : 'text-neutral-700'}`} />
-            <p className={`text-sm ${isLight ? 'text-slate-600' : isDarkSlate ? 'text-slate-400' : 'text-neutral-400'}`}>No songs found in this filter.</p>
+          <div className="py-20 px-4 text-center flex flex-col items-center justify-center gap-3">
+            <div
+              className={`w-16 h-16 rounded-2xl flex items-center justify-center ${
+                isLight ? 'bg-sky-50 text-blue-400' : isDarkSlate ? 'bg-slate-800/80 text-sky-400' : 'bg-neutral-900 text-amber-400'
+              }`}
+            >
+              <Music className="w-8 h-8" />
+            </div>
+            <div>
+              <h3 className={`text-base font-bold ${isLight ? 'text-slate-800' : 'text-neutral-100'}`}>
+                No songs found (ไม่พบเพลงที่ค้นหา)
+              </h3>
+              <p className={`text-xs mt-1 max-w-sm ${isLight ? 'text-slate-500' : 'text-neutral-400'}`}>
+                {searchQuery && <span>Search: "{searchQuery}" </span>}
+                {selectedKey !== 'all' && <span>• Key: {selectedKey}</span>}
+              </p>
+            </div>
             <button
+              type="button"
               onClick={() => {
                 setSearchQuery('');
                 setSelectedKey('all');
-                setSelectedTag('all');
               }}
-              className={`text-xs underline cursor-pointer ${isLight ? 'text-blue-600' : isDarkSlate ? 'text-sky-400' : 'text-amber-400'}`}
+              className={`mt-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 shadow-xs ${
+                isLight
+                  ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                  : isDarkSlate
+                  ? 'bg-sky-500 hover:bg-sky-400 text-slate-950'
+                  : 'bg-amber-400 hover:bg-amber-300 text-neutral-950'
+              }`}
             >
-              Clear filters
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>Clear filters & search (ล้างตัวกรองทั้งหมด)</span>
             </button>
           </div>
         ) : (
@@ -453,7 +515,7 @@ export const SongList: React.FC<Props> = ({
                   : 'hover:bg-neutral-900/80'
               }`}
             >
-              {/* Left: Title & Artist */}
+              {/* Left: Title, Artist, & Tags */}
               <div className="flex flex-col min-w-0 pr-4">
                 <span className={`font-bold text-sm sm:text-base transition-colors truncate ${
                   isLight

@@ -358,7 +358,7 @@ export const SongViewer: React.FC<Props> = ({
                 ? 'bg-white hover:bg-blue-50 text-slate-700 border-slate-200 shadow-xs'
                 : 'bg-neutral-800 hover:bg-neutral-700 text-neutral-200 border-neutral-700'
             }`}
-            title="Settings (การตั้งค่า / ปรับแต่งการแสดงผล)"
+            title="แถบควบคุมด่วน (Quick Actions)"
           >
             <Sliders className="w-4 h-4" />
           </button>

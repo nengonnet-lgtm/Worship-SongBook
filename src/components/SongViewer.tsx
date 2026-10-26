@@ -400,91 +400,98 @@ export const SongViewer: React.FC<Props> = ({
         </div>
       )}
 
-      {/* MAIN DISPLAY AREA (PURE MONOSPACE TEXT RENDER FOR COMPATIBILITY) */}
+      {/* MAIN DISPLAY AREA (SAME MONOSPACE 2-LINE FORMAT AS SONG EDITOR MODAL PREVIEW) */}
       <div
         ref={scrollContainerRef}
         className="flex-1 overflow-y-auto px-4 sm:px-8 md:px-12 py-6"
         style={{
           fontSize: `${settings.fontSize || 16}px`,
-          lineHeight: 1.6,
-          fontFamily: "'JetBrains Mono', 'Sarabun', 'Thonburi', 'Sukhumvit Set', -apple-system, BlinkMacSystemFont, monospace, sans-serif",
+          lineHeight: 1.5,
+          fontFamily: "'Courier New', Courier, 'JetBrains Mono', monospace",
           letterSpacing: '0px',
-          wordSpacing: '0px',
-          tabSize: 4,
-          WebkitTextSizeAdjust: '100%',
-          fontVariantLigatures: 'normal',
-          fontFeatureSettings: '"liga" 1, "calt" 1, "ccmp" 1'
+          tabSize: 4
         }}
       >
         <div className={`max-w-5xl mx-auto ${settings.columns === 2 ? 'grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-6' : 'space-y-6'}`}>
           {parsed.sections.map((section, sIdx) => (
-            <div key={sIdx} className="break-inside-avoid mb-6">
+            <div key={sIdx} className="break-inside-avoid space-y-3 mb-6">
               {section.title && (
-                <div className="mb-2.5">
-                  <span className={`inline-block px-2.5 py-0.5 rounded text-xs font-bold uppercase tracking-wider font-mono border ${isLight ? 'bg-blue-50 text-blue-900 border-blue-200' : 'bg-amber-400/15 text-amber-300 border-amber-400/25'}`}>
-                    {section.title}
-                  </span>
-                </div>
+                <span className={`text-xs font-bold font-mono uppercase tracking-wider block ${isLight ? 'text-amber-600' : 'text-amber-400'}`}>
+                  {section.title}
+                </span>
               )}
 
-              <div className="space-y-3">
-                {section.lines.map((line, lIdx) => {
-                  if (line.type === 'empty') return <div key={lIdx} className="h-4" />;
-                  if (line.type === 'comment') {
-                    return (
-                      <div key={lIdx} className="text-xs italic pl-2.5 py-1 border-l-2 text-neutral-400 border-neutral-600">
-                        {line.comment}
-                      </div>
-                    );
-                  }
-
-                  // 1. บรรทัดคอร์ดล้วน (Intro / Solo / บรรเลง)
-                  if (line.isChordOnly) {
-                    return (
-                      <div
-                        key={lIdx}
-                        className="py-1 font-mono text-sm sm:text-base select-none whitespace-pre leading-relaxed flex flex-wrap items-center gap-x-3 my-1"
-                        style={{ color: chordsColor }}
-                      >
-                        {line.items?.map((item, iIdx) => (
-                          <span key={iIdx} className="font-bold font-mono whitespace-pre">
-                            {item.chord || item.lyric}
-                          </span>
-                        ))}
-                      </div>
-                    );
-                  }
-
-                  // 2. บรรทัดที่มีทั้งคอร์ดและเนื้อเพลง (ผูกคอร์ดเข้ากับพยางค์เนื้อเพลงโดยตรง ล็อกตำแหน่งให้ตรงกัน 100% ทุกอุปกรณ์)
-                  const lineHasChords = line.items?.some((it) => Boolean(it.chord));
-
+              {section.lines.map((line, lIdx) => {
+                if (line.type === 'empty') return <div key={lIdx} className="h-3" />;
+                if (line.type === 'comment') {
                   return (
-                    <div key={lIdx} className="flex flex-wrap items-end font-mono text-sm sm:text-base leading-normal select-none mb-3 tracking-normal">
-                      {line.items?.map((item, itemIdx) => (
-                        <div key={itemIdx} className="inline-flex flex-col justify-end relative align-bottom">
-                          {lineHasChords && settings.showChords !== false && (
-                            <div className="min-h-[1.25em] flex items-end pb-0.5">
-                              {item.chord ? (
-                                <span
-                                  className="font-bold font-mono text-[0.88em] leading-none whitespace-nowrap"
-                                  style={{ color: chordsColor }}
-                                >
-                                  {item.chord}
-                                </span>
-                              ) : (
-                                <span className="invisible select-none text-[0.88em] font-mono leading-none">&nbsp;</span>
-                              )}
-                            </div>
-                          )}
-                          <span className={`whitespace-pre ${isLight ? 'text-slate-900 font-medium' : 'text-neutral-100'}`}>
-                            {item.lyric || (item.chord ? '\u00A0' : '')}
-                          </span>
-                        </div>
-                      ))}
+                    <div key={lIdx} className={`text-xs italic pl-2.5 py-1 border-l-2 ${isLight ? 'text-slate-500 border-slate-300' : 'text-neutral-400 border-neutral-700'}`}>
+                      {line.comment}
                     </div>
                   );
-                })}
-              </div>
+                }
+
+                // คำนวณ Plain Text 2 บรรทัดเหมือนในส่วน preview ของ SongEditorModal
+                let chordLineStr = '';
+                let lyricLineStr = '';
+                let currentPos = 0;
+
+                const getVisualLen = (str: string) => getThaiVisualLength(str);
+
+                line.items?.forEach((item) => {
+                  const chord = item.chord || '';
+                  const lyric = item.lyric || '';
+
+                  if (chord) {
+                    const padding = Math.max(0, currentPos - getVisualLen(chordLineStr));
+                    chordLineStr += ' '.repeat(padding) + chord;
+                  }
+
+                  lyricLineStr += lyric;
+
+                  const chordVisLen = chord ? getVisualLen(chord) : 0;
+                  const lyricVisLen = getVisualLen(lyric);
+                  currentPos += Math.max(chordVisLen, lyricVisLen);
+                });
+
+                if (!chordLineStr.trim() && !lyricLineStr.trim()) {
+                  return <div key={lIdx} className="h-3" />;
+                }
+
+                return (
+                  <div key={lIdx} className="font-mono leading-tight select-none mb-3">
+                    {/* บรรทัดคอร์ด */}
+                    {settings.showChords !== false && chordLineStr.trim() && (
+                      <div
+                        className="whitespace-pre font-bold block"
+                        style={{ color: chordsColor }}
+                      >
+                        {chordLineStr.split(/(\s+)/).map((token, tIdx) => {
+                          if (token && token.trim()) {
+                            return (
+                              <span
+                                key={tIdx}
+                                onClick={() => setActiveChordDiagram(token)}
+                                className="cursor-pointer hover:underline transition-opacity active:opacity-70"
+                                title={`ดูคอร์ด ${token}`}
+                              >
+                                {token}
+                              </span>
+                            );
+                          }
+                          return token;
+                        })}
+                      </div>
+                    )}
+                    {/* บรรทัดเนื้อเพลง */}
+                    {lyricLineStr ? (
+                      <div className={`whitespace-pre block ${isLight ? 'text-slate-800' : 'text-neutral-200'}`}>
+                        {lyricLineStr}
+                      </div>
+                    ) : null}
+                  </div>
+                );
+              })}
             </div>
           ))}
         </div>

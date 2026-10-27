@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Song, AppSettings } from '../types/song';
 import { parseChordPro } from '../utils/chordProParser';
 import { transposeKey, getSemitonesBetweenKeys } from '../utils/chordUtils';
+import { formatChordPro } from '../utils/chordProFormatter';
 import { ChordDiagramVisualizer } from './ChordDiagramVisualizer';
 import { QuickActionsSheet } from './QuickActionsSheet';
 import {
@@ -242,7 +243,13 @@ export const SongViewer: React.FC<Props> = ({
     if (song.timeSignature && !/\{(?:time|timeSignature):\s*[^}]+\}/i.test(content)) header += `{time: ${song.timeSignature}}\n`;
 
     const fullExport = header ? `${header}\n${content}` : content;
-    const blob = new Blob([fullExport], { type: 'text/plain;charset=utf-8' });
+    const formattedExport = formatChordPro(fullExport, {
+      cleanSpacing: true,
+      standardizeSections: true,
+      normalizeChordBrackets: true,
+      standardizeChordCasing: true
+    });
+    const blob = new Blob([formattedExport], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;

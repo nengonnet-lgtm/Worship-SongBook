@@ -74,6 +74,16 @@ export function convertStandaloneChordLine(line: string): string {
   return cleanLine.replace(regex, '[$1]');
 }
 
+export function hasTwoLineChordFormat(text: string): boolean {
+  const lines = text.split('\n');
+  for (let i = 0; i < lines.length - 1; i++) {
+    if (isChordLine(lines[i]) && !isChordLine(lines[i + 1]) && lines[i + 1].trim().length > 0) {
+      return true;
+    }
+  }
+  return false;
+}
+
 // ตรวจสอบว่าบรรทัดนี้เป็นบรรทัดคอร์ดล้วน / Intro / Solo หรือไม่
 export function checkIfChordOnly(items: ParsedLineItem[]): boolean {
   const hasChords = items.some((it) => Boolean(it.chord));

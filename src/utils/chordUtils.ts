@@ -178,6 +178,67 @@ export function getSemitonesBetweenKeys(fromKey: string, toKey: string): number 
   return diff;
 }
 
+export interface KeyChordItem {
+  chord: string;
+  degree: string;
+  isPrimary?: boolean;
+}
+
+export interface KeyChordsData {
+  key: string;
+  primary: KeyChordItem[];
+  secondary: KeyChordItem[];
+  variations: string[];
+}
+
+export const COMMON_POPULAR_CHORDS = [
+  'C', 'Em', 'Am', 'G', 'F', 'Dm', 'D', 'A', 'E', 'Bm', 'Bb', 'B7'
+];
+
+export const COMMON_ROOT_NOTES = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
+
+export const COMMON_CHORD_MODIFIERS = ['m', '7', 'maj7', 'm7', 'sus4', 'add9', 'dim'];
+
+export function getDiatonicChords(keyName = 'C'): KeyChordsData {
+  const cleanKey = keyName.trim() || 'C';
+  const semitones = getSemitonesBetweenKeys('C', cleanKey);
+
+  const I = transposeNote('C', semitones, cleanKey);
+  const ii = transposeNote('Dm', semitones, cleanKey);
+  const iii = transposeNote('Em', semitones, cleanKey);
+  const IV = transposeNote('F', semitones, cleanKey);
+  const V = transposeNote('G', semitones, cleanKey);
+  const vi = transposeNote('Am', semitones, cleanKey);
+  const vii = transposeNote('Bdim', semitones, cleanKey);
+  const V7 = transposeNote('G7', semitones, cleanKey);
+
+  // Common worship / pop extensions
+  const Isus4 = transposeNote('Csus4', semitones, cleanKey);
+  const Iadd9 = transposeNote('Cadd9', semitones, cleanKey);
+  const Imaj7 = transposeNote('Cmaj7', semitones, cleanKey);
+  const IVmaj7 = transposeNote('Fmaj7', semitones, cleanKey);
+  const vi7 = transposeNote('Am7', semitones, cleanKey);
+  const slashBass1 = transposeNote('C/E', semitones, cleanKey);
+  const slashBass2 = transposeNote('G/B', semitones, cleanKey);
+
+  return {
+    key: cleanKey,
+    primary: [
+      { chord: I, degree: 'I', isPrimary: true },
+      { chord: IV, degree: 'IV', isPrimary: true },
+      { chord: V, degree: 'V', isPrimary: true },
+      { chord: vi, degree: 'vi', isPrimary: true }
+    ],
+    secondary: [
+      { chord: ii, degree: 'ii' },
+      { chord: iii, degree: 'iii' },
+      { chord: V7, degree: 'V7' },
+      { chord: vii, degree: 'vii°' }
+    ],
+    variations: [Isus4, Iadd9, Imaj7, IVmaj7, vi7, slashBass1, slashBass2]
+  };
+}
+
 import {
   normalizeThaiText,
   fixThaiChordProGraphemes,

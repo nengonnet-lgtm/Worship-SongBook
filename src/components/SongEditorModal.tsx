@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Song, AppSettings } from '../types/song';
 import {
   convertTextToChordPro,
@@ -6,6 +6,13 @@ import {
   KEYS
 } from '../utils/chordUtils';
 import { parseChordPro } from '../utils/chordProParser';
+import {
+  formatChordPro,
+  detectChordProStats,
+  extractMetadataFromChordPro,
+  syncMetadataToChordPro
+} from '../utils/chordProFormatter';
+import { ChordHelperSidebar } from './ChordHelperSidebar';
 import { getThaiVisualLength } from '../utils/thaiText';
 import {
   X,
@@ -14,7 +21,15 @@ import {
   Music,
   ArrowRightLeft,
   ClipboardPaste,
-  Check
+  Check,
+  Wand2,
+  SlidersHorizontal,
+  ChevronDown,
+  CheckCheck,
+  AlignLeft,
+  Layers,
+  RefreshCw,
+  FileCode2
 } from 'lucide-react';
 
 interface Props {
@@ -47,9 +62,64 @@ export const SongEditorModal: React.FC<Props> = ({
 
   const [activeTab, setActiveTab] = useState<'editor' | 'preview' | 'split'>('split');
   const [showPasteModal, setShowPasteModal] = useState(false);
+  const [showFormatDropdown, setShowFormatDropdown] = useState(false);
+  const [formatFeedback, setFormatFeedback] = useState<{ text: string; type: 'success' | 'info' } | null>(null);
   const [pasteInput, setPasteInput] = useState('');
   const [pasteConvertMode, setPasteConvertMode] = useState<'chordpro' | 'raw'>('chordpro');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // สถานะการยุบ/ขยายแถบตัวช่วยแทรกคอร์ดด้านซ้ายมือ (Default: ขยายบนจอใหญ่)
+  const [isChordSidebarCollapsed, setIsChordSidebarCollapsed] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('songbook_chord_sidebar_collapsed');
+      return saved !== null ? JSON.parse(saved) : false;
+    } catch {
+      return false;
+    }
+  });
+
+  const toggleChordSidebar = () => {
+    setIsChordSidebarCollapsed((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('songbook_chord_sidebar_collapsed', JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+  };
+
+  // รวบรวมคอร์ดที่ปรากฏในเนื้อเพลงปัจจุบันแบบ Reactive
+  const usedChords = useMemo(() => {
+    const matches = chordProContent.match(/\[([A-G][a-zA-Z0-9#b/]*?)\]/g) || [];
+    const set = new Set<string>();
+    matches.forEach((m) => {
+      const c = m.slice(1, -1).trim();
+      if (c) set.add(c);
+    });
+    return Array.from(set);
+  }, [chordProContent]);
+
+  // ตัวช่วยแทรกคอร์ดจากแถบข้าง
+  const handleInsertChordFromSidebar = (chordOrText: string) => {
+    const toInsert =
+      chordOrText.startsWith('[') ||
+      chordOrText.startsWith('{') ||
+      chordOrText.startsWith(' ') ||
+      chordOrText.startsWith('\n')
+        ? chordOrText
+        : `[${chordOrText}]`;
+
+    insertTextAtCursor(toInsert);
+  };
+
+  // Auto clear format feedback after 4.5 seconds
+  useEffect(() => {
+    if (!formatFeedback) return;
+    const timer = setTimeout(() => {
+      setFormatFeedback(null);
+    }, 4500);
+    return () => clearTimeout(timer);
+  }, [formatFeedback]);
 
   // Quick insertion helper
   const insertTextAtCursor = (textToInsert: string) => {
@@ -69,14 +139,114 @@ export const SongEditorModal: React.FC<Props> = ({
     }, 0);
   };
 
+  const handleAutoFormatAll = (includeHeaders = false) => {
+    const formatted = formatChordPro(chordProContent, {
+      standardizeSections: true,
+      normalizeChordBrackets: true,
+      standardizeChordCasing: true,
+      cleanSpacing: true,
+      includeHeaders,
+      title,
+      artist,
+      key,
+      tempo
+    });
+    setChordProContent(formatted);
+    const stats = detectChordProStats(formatted);
+    setFormatFeedback({
+      text: `จัดรูปแบบ ChordPro เรียบร้อยแล้ว ✨ (ตรวจพบ ${stats.chordCount} คอร์ด, ${stats.sectionCount} ท่อนเพลง)`,
+      type: 'success'
+    });
+    setShowFormatDropdown(false);
+  };
+
+  const handleStandardizeSectionsOnly = () => {
+    const formatted = formatChordPro(chordProContent, {
+      standardizeSections: true,
+      normalizeChordBrackets: false,
+      standardizeChordCasing: false,
+      cleanSpacing: true
+    });
+    setChordProContent(formatted);
+    const stats = detectChordProStats(formatted);
+    setFormatFeedback({
+      text: `จัดระเบียบหัวข้อท่อน {c: ...} เรียบร้อย (${stats.sectionCount} ท่อน)`,
+      type: 'success'
+    });
+    setShowFormatDropdown(false);
+  };
+
+  const handleCleanSpacingOnly = () => {
+    const formatted = formatChordPro(chordProContent, {
+      standardizeSections: false,
+      normalizeChordBrackets: false,
+      standardizeChordCasing: false,
+      cleanSpacing: true
+    });
+    setChordProContent(formatted);
+    setFormatFeedback({
+      text: `จัดระเบียบการเว้นบรรทัดและช่องว่างเรียบร้อยแล้ว`,
+      type: 'success'
+    });
+    setShowFormatDropdown(false);
+  };
+
+  const handleSyncMetaHeaders = () => {
+    const synced = syncMetadataToChordPro(chordProContent, {
+      title,
+      artist,
+      key,
+      tempo
+    });
+    setChordProContent(synced);
+    setFormatFeedback({
+      text: `แทรก/อัปเดตแท็กหัวเพลง {title, artist, key, tempo} เรียบร้อยแล้ว`,
+      type: 'success'
+    });
+    setShowFormatDropdown(false);
+  };
+
+  const handleSyncFromChordProToFields = () => {
+    const extracted = extractMetadataFromChordPro(chordProContent);
+    let updatedCount = 0;
+    if (extracted.title) { setTitle(extracted.title); updatedCount++; }
+    if (extracted.artist) { setArtist(extracted.artist); updatedCount++; }
+    if (extracted.key && KEYS.includes(extracted.key)) { setKey(extracted.key); updatedCount++; }
+    if (extracted.tempo) { setTempo(extracted.tempo); updatedCount++; }
+
+    if (updatedCount > 0) {
+      setFormatFeedback({
+        text: `ดึงข้อมูล ${updatedCount} รายการจาก ChordPro เข้าแบบฟอร์มเรียบร้อยแล้ว`,
+        type: 'success'
+      });
+    } else {
+      setFormatFeedback({
+        text: `ไม่พบแท็กหัวเพลง {title}, {key} ในเนื้อเพลง`,
+        type: 'info'
+      });
+    }
+    setShowFormatDropdown(false);
+  };
+
   const handleConvertSmart = () => {
     const converted = convertTextToChordPro(chordProContent);
     setChordProContent(converted);
+    const stats = detectChordProStats(converted);
+    setFormatFeedback({
+      text: `แปลงแบบ 2 บรรทัด ➔ ChordPro เรียบร้อย (${stats.chordCount} คอร์ด)`,
+      type: 'success'
+    });
+    setShowFormatDropdown(false);
   };
 
   const handleConvertTo2Line = () => {
     const converted = convertChordProTo2LineText(chordProContent);
     setChordProContent(converted);
+    setFormatFeedback({
+      text: `แปลง ChordPro ➔ แบบ 2 บรรทัด เรียบร้อยแล้ว`,
+      type: 'success'
+    });
+    setShowFormatDropdown(false);
   };
 
   const handleSmartPasteSubmit = () => {
@@ -296,57 +466,231 @@ export const SongEditorModal: React.FC<Props> = ({
           )}
         </div>
 
-        {/* 2. Compact Toolbar */}
-        <div className="flex items-center justify-between px-6 py-1.5 border-b border-neutral-800 bg-neutral-950/70 text-xs shrink-0 gap-3">
-          <div className="flex items-center gap-1.5 shrink-0">
-            <button
-              type="button"
-              onClick={() => setShowPasteModal(true)}
-              className="flex items-center gap-1 px-2.5 py-1 rounded bg-sky-500/20 text-sky-300 border border-sky-500/40 hover:bg-sky-500/30 text-[11px] font-semibold cursor-pointer transition-colors"
-            >
-              <ClipboardPaste className="w-3.5 h-3.5" />
-              <span>วางจาก Word / เว็บ</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={handleConvertSmart}
-              className="flex items-center gap-1 px-2.5 py-1 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30 text-[11px] font-semibold cursor-pointer transition-colors"
-            >
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>2 บรรทัด ➔ ChordPro</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={handleConvertTo2Line}
-              className="flex items-center gap-1 px-2 py-1 rounded bg-neutral-800 hover:bg-neutral-700 text-neutral-300 border border-neutral-700 text-[11px] font-medium cursor-pointer transition-colors"
-            >
-              <ArrowRightLeft className="w-3.5 h-3.5 text-neutral-400" />
-              <span>ChordPro ➔ 2 บรรทัด</span>
-            </button>
-          </div>
-
-          <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none">
-            <span className="text-[10px] font-semibold text-neutral-500 uppercase shrink-0">ท่อนเพลง:</span>
-            {['{c: Verse 1}', '{c: Chorus}', '{c: Bridge}', '{c: Outro}'].map((sec) => (
+        {/* 2. Compact Toolbar with ChordPro Formatting */}
+        <div className="relative px-6 py-1.5 border-b border-neutral-800 bg-neutral-950/70 text-xs shrink-0">
+          <div className="flex items-center justify-between gap-2 overflow-x-auto scrollbar-none">
+            <div className="flex items-center gap-1.5 shrink-0">
+              {/* ปุ่มเปิด/ปิด แถบคอร์ดด้านซ้าย */}
               <button
-                key={sec}
                 type="button"
-                onClick={() => insertTextAtCursor(`\n${sec}\n`)}
-                className="px-2 py-1 rounded bg-neutral-800 hover:bg-neutral-700 text-sky-400 font-mono text-[11px] border border-neutral-700 cursor-pointer shrink-0 transition-colors"
+                onClick={toggleChordSidebar}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-lg border text-[11px] font-semibold cursor-pointer transition-colors ${
+                  !isChordSidebarCollapsed
+                    ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 hover:bg-amber-500/30'
+                    : 'bg-neutral-800 text-neutral-300 border-neutral-700 hover:bg-neutral-700'
+                }`}
+                title={isChordSidebarCollapsed ? 'ขยายแถบตัวช่วยแทรกคอร์ดด้านซ้าย' : 'ยุบแถบตัวช่วยแทรกคอร์ดด้านซ้าย'}
               >
-                {sec.replace(/[{}]/g, '')}
+                <Music className="w-3.5 h-3.5 text-amber-400" />
+                <span>{isChordSidebarCollapsed ? 'แถบคอร์ด ◀' : 'ซ่อนคอร์ด'}</span>
               </button>
-            ))}
+
+              <button
+                type="button"
+                onClick={() => setShowPasteModal(true)}
+                className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-sky-500/20 text-sky-300 border border-sky-500/40 hover:bg-sky-500/30 text-[11px] font-semibold cursor-pointer transition-colors"
+                title="วางคอร์ดและเนื้อเพลงจาก Word หรือ เว็บ"
+              >
+                <ClipboardPaste className="w-3.5 h-3.5" />
+                <span>วางจาก Word / เว็บ</span>
+              </button>
+
+              {/* ปุ่มหลัก: จัดรูปแบบ ChordPro */}
+              <div className="flex items-center rounded-lg bg-amber-500/20 border border-amber-500/40 p-0.5 shadow-xs">
+                <button
+                  type="button"
+                  onClick={() => handleAutoFormatAll(false)}
+                  className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-amber-500 hover:bg-amber-400 text-neutral-950 font-bold text-[11px] transition-colors cursor-pointer"
+                  title="จัดรูปแบบ ChordPro อัตโนมัติ (แก้ไขวงเล็บคอร์ด, หัวข้อท่อน, ตัวพิมพ์คอร์ด และสระไทย)"
+                >
+                  <Wand2 className="w-3.5 h-3.5 text-neutral-950" />
+                  <span>จัดรูปแบบ ChordPro</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setShowFormatDropdown(!showFormatDropdown)}
+                  className="px-1.5 py-0.5 text-amber-300 hover:text-amber-100 hover:bg-amber-500/30 rounded-md transition-colors cursor-pointer"
+                  title="ตัวเลือกการจัดรูปแบบเพิ่มเติม"
+                >
+                  <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showFormatDropdown ? 'rotate-180' : ''}`} />
+                </button>
+              </div>
+
+              {/* ปุ่มสลับ 2 บรรทัด */}
+              <button
+                type="button"
+                onClick={handleConvertTo2Line}
+                className="hidden md:flex items-center gap-1 px-2 py-1 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-300 border border-neutral-700 text-[11px] font-medium cursor-pointer transition-colors"
+                title="แปลง ChordPro ให้อยู่ในรูปคอร์ดลอยบนเนื้อเพลง"
+              >
+                <ArrowRightLeft className="w-3.5 h-3.5 text-neutral-400" />
+                <span>➔ 2 บรรทัด</span>
+              </button>
+            </div>
+
+            {/* Quick Section Headers and Bracket Insert */}
+            <div className="flex items-center gap-1.5 shrink-0">
+              <span className="text-[10px] font-semibold text-neutral-500 uppercase">ท่อน:</span>
+              {['{c: Intro}', '{c: Verse 1}', '{c: Verse 2}', '{c: Chorus}', '{c: Bridge}', '{c: Solo}', '{c: Outro}'].map((sec) => (
+                <button
+                  key={sec}
+                  type="button"
+                  onClick={() => insertTextAtCursor(`\n${sec}\n`)}
+                  className="px-2 py-0.5 rounded bg-neutral-800 hover:bg-neutral-700 text-sky-400 font-mono text-[11px] border border-neutral-700 cursor-pointer shrink-0 transition-colors"
+                  title={`แทรก ${sec}`}
+                >
+                  {sec.replace(/[{c:\s}]/g, '')}
+                </button>
+              ))}
+
+              <button
+                type="button"
+                onClick={() => insertTextAtCursor('[]')}
+                className="px-2 py-0.5 rounded bg-neutral-800 hover:bg-neutral-700 text-amber-400 font-mono text-[11px] border border-neutral-700 cursor-pointer shrink-0 transition-colors"
+                title="แทรกวงเล็บคอร์ด []"
+              >
+                [คอร์ด]
+              </button>
+            </div>
           </div>
+
+          {/* เมนูตัวเลือกการจัดรูปแบบแบบ Dropdown */}
+          {showFormatDropdown && (
+            <>
+              <div
+                className="fixed inset-0 z-40"
+                onClick={() => setShowFormatDropdown(false)}
+              />
+              <div className="absolute left-6 top-full mt-1.5 z-50 w-80 bg-neutral-900 border border-neutral-700 rounded-xl shadow-2xl p-2 space-y-1 text-neutral-200 animate-fadeIn">
+                <div className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-neutral-400 border-b border-neutral-800">
+                  เครื่องมือจัดรูปแบบ ChordPro
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => handleAutoFormatAll(false)}
+                  className="w-full flex items-start gap-2.5 px-2.5 py-1.5 rounded-lg hover:bg-neutral-800 text-left transition-colors cursor-pointer group"
+                >
+                  <Wand2 className="w-4 h-4 text-amber-400 shrink-0 mt-0.5 group-hover:scale-110 transition-transform" />
+                  <div>
+                    <div className="font-semibold text-xs text-amber-400">จัดรูปแบบทั้งหมดอัตโนมัติ (แนะนำ)</div>
+                    <div className="text-[10px] text-neutral-400 leading-tight">ซ่อมแซมวงเล็บ [C], หัวข้อท่อน {`{c:...}`}, ตัวพิมพ์คอร์ด และสระไทย</div>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleAutoFormatAll(true)}
+                  className="w-full flex items-start gap-2.5 px-2.5 py-1.5 rounded-lg hover:bg-neutral-800 text-left transition-colors cursor-pointer"
+                >
+                  <FileCode2 className="w-4 h-4 text-sky-400 shrink-0 mt-0.5" />
+                  <div>
+                    <div className="font-semibold text-xs text-neutral-100">จัดรูปแบบ + ใส่ข้อมูลหัวเพลง</div>
+                    <div className="text-[10px] text-neutral-400 leading-tight">จัดรูปแบบพร้อมใส่แท็ก {`{title}`}, {`{artist}`}, {`{key}`}, {`{tempo}`}</div>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleStandardizeSectionsOnly}
+                  className="w-full flex items-start gap-2.5 px-2.5 py-1.5 rounded-lg hover:bg-neutral-800 text-left transition-colors cursor-pointer"
+                >
+                  <Layers className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                  <div>
+                    <div className="font-semibold text-xs text-neutral-100">แปลงหัวข้อท่อนเป็น {`{c: ...}`}</div>
+                    <div className="text-[10px] text-neutral-400 leading-tight">แปลง [Intro], Verse 1:, [Chorus] ให้อยู่ในมาตรฐาน {`{c: ...}`}</div>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleCleanSpacingOnly}
+                  className="w-full flex items-start gap-2.5 px-2.5 py-1.5 rounded-lg hover:bg-neutral-800 text-left transition-colors cursor-pointer"
+                >
+                  <AlignLeft className="w-4 h-4 text-indigo-400 shrink-0 mt-0.5" />
+                  <div>
+                    <div className="font-semibold text-xs text-neutral-100">จัดระเบียบการเว้นบรรทัด</div>
+                    <div className="text-[10px] text-neutral-400 leading-tight">ลบบรรทัดว่างส่วนเกินและเว้นวรรคหน้าท่อนเพลงอย่างเป็นระเบียบ</div>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleSyncFromChordProToFields}
+                  className="w-full flex items-start gap-2.5 px-2.5 py-1.5 rounded-lg hover:bg-neutral-800 text-left transition-colors cursor-pointer"
+                >
+                  <RefreshCw className="w-4 h-4 text-teal-400 shrink-0 mt-0.5" />
+                  <div>
+                    <div className="font-semibold text-xs text-neutral-100">ดึงข้อมูลจาก ChordPro เข้าแบบฟอร์ม</div>
+                    <div className="text-[10px] text-neutral-400 leading-tight">สแกนหา {`{title}`}, {`{artist}`}, {`{key}`} ในเนื้อเพลงมาใส่ช่องกรอก</div>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleSyncMetaHeaders}
+                  className="w-full flex items-start gap-2.5 px-2.5 py-1.5 rounded-lg hover:bg-neutral-800 text-left transition-colors cursor-pointer"
+                >
+                  <Sparkles className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+                  <div>
+                    <div className="font-semibold text-xs text-neutral-100">ซิงค์แบบฟอร์มเข้าเนื้อเพลง</div>
+                    <div className="text-[10px] text-neutral-400 leading-tight">นำ Title, Key, BPM ไปแทรกหรืออัปเดตเป็นแท็กหัวเพลง</div>
+                  </div>
+                </button>
+
+                <div className="pt-1 border-t border-neutral-800 flex items-center justify-between gap-1">
+                  <button
+                    type="button"
+                    onClick={handleConvertSmart}
+                    className="flex-1 py-1 px-2 rounded bg-neutral-800 hover:bg-neutral-700 text-[10px] text-neutral-300 font-medium text-center cursor-pointer"
+                  >
+                    2 บรรทัด ➔ ChordPro
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleConvertTo2Line}
+                    className="flex-1 py-1 px-2 rounded bg-neutral-800 hover:bg-neutral-700 text-[10px] text-neutral-300 font-medium text-center cursor-pointer"
+                  >
+                    ChordPro ➔ 2 บรรทัด
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
         </div>
 
+        {/* Format Feedback Banner */}
+        {formatFeedback && (
+          <div className="flex items-center justify-between px-6 py-1.5 bg-amber-500/15 border-b border-amber-500/30 text-amber-300 text-xs shrink-0 animate-fadeIn">
+            <div className="flex items-center gap-2 min-w-0">
+              <CheckCheck className="w-4 h-4 text-amber-400 shrink-0" />
+              <span className="font-medium truncate">{formatFeedback.text}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setFormatFeedback(null)}
+              className="ml-2 text-amber-400 hover:text-amber-200 text-xs font-bold cursor-pointer"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+
         {/* Editor & Preview Area */}
-        <div className="flex-1 flex min-h-0 overflow-hidden">
+        <div className="flex-1 flex min-h-0 overflow-hidden relative">
+          {/* แถบตัวช่วยแทรกคอร์ดด้านซ้ายมือ (Collapsible Chord Sidebar) */}
+          <ChordHelperSidebar
+            currentKey={key}
+            isCollapsed={isChordSidebarCollapsed}
+            onToggleCollapse={toggleChordSidebar}
+            onInsertChord={handleInsertChordFromSidebar}
+            usedChords={usedChords}
+          />
+
           {/* ChordPro Editor Textarea */}
           {(activeTab === 'editor' || activeTab === 'split') && (
-            <div className={`flex flex-col h-full ${activeTab === 'split' ? 'w-1/2 border-r border-neutral-800' : 'w-full'}`}>
+            <div className={`flex flex-col h-full min-w-0 ${activeTab === 'split' ? 'flex-1 border-r border-neutral-800' : 'flex-1'}`}>
               <div className="px-4 py-1.5 text-[11px] font-mono text-neutral-400 bg-neutral-900/90 border-b border-neutral-800 flex justify-between items-center">
                 <span>Chord & Lyrics Editor</span>
                 <span className="text-[10px] text-neutral-500">รองรับทั้งแบบ 2 บรรทัด และ [Chord]</span>
@@ -364,11 +708,10 @@ export const SongEditorModal: React.FC<Props> = ({
           )}
 
           {/* Live Preview Panel */}
-{/* Live Preview Panel ใน SongEditorModal.tsx */}
-{(activeTab === 'preview' || activeTab === 'split') && (
-  <div className={`flex flex-col h-full overflow-y-auto p-6 ${
-    settings.theme === 'light' ? 'bg-white text-slate-900' : 'bg-neutral-950 text-neutral-100'
-  } ${activeTab === 'split' ? 'w-1/2' : 'w-full'}`}>
+          {(activeTab === 'preview' || activeTab === 'split') && (
+            <div className={`flex flex-col h-full min-w-0 overflow-y-auto p-6 ${
+              settings.theme === 'light' ? 'bg-white text-slate-900' : 'bg-neutral-950 text-neutral-100'
+            } ${activeTab === 'split' ? 'flex-1' : 'flex-1'}`}>
     <div className="mb-3 pb-2 border-b border-neutral-800">
       <span className="text-[10px] font-semibold uppercase tracking-widest font-mono text-neutral-400">
         Live Stage Preview

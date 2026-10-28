@@ -6,6 +6,7 @@ import { formatChordPro } from '../utils/chordProFormatter';
 import { ChordDiagramVisualizer } from './ChordDiagramVisualizer';
 import { QuickActionsSheet } from './QuickActionsSheet';
 import { ChordLine } from './ChordLine';
+import { QuickTransposeButton, normalizeSemitones } from './QuickTransposeButton';
 import {
   ChevronLeft,
   ChevronRight,
@@ -15,8 +16,6 @@ import {
   Minimize2,
   Play,
   Pause,
-  Plus,
-  Minus,
   Sliders,
   Music,
   Download,
@@ -90,7 +89,9 @@ export const SongViewer: React.FC<Props> = ({
     }
   }, [song.id, effectiveTargetKey, song.key, song.capo]);
 
-  const handleUpdateTranspose = (newSemitones: number) => {
+  const handleUpdateTranspose = (requestedSemitones: number) => {
+    // Same notes at n and n ± 12, so keep the offset in -5..+6 (stepping past +6 wraps to -5)
+    const newSemitones = normalizeSemitones(requestedSemitones);
     setTransposeSemitones(newSemitones);
     const baseKey = song.key || 'C';
     const newKey = transposeKey(baseKey, newSemitones);
@@ -326,26 +327,13 @@ export const SongViewer: React.FC<Props> = ({
 
         {/* Right Controls */}
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-          <div className={`flex items-center rounded-lg border p-0.5 shadow-xs ${isLight ? 'border-blue-200 bg-blue-50/70' : 'border-neutral-700/80 bg-neutral-900/60'}`}>
-            <button
-              onClick={() => handleUpdateTranspose(transposeSemitones - 1)}
-              className={`px-2 py-1 text-xs font-bold rounded transition-colors cursor-pointer ${isLight ? 'hover:bg-blue-100 text-blue-800' : 'hover:bg-neutral-700 text-neutral-300 hover:text-white'}`}
-            >
-              <Minus className="w-3.5 h-3.5" />
-            </button>
-            <button
-              onClick={() => handleUpdateTranspose(0)}
-              className={`px-2 py-1 text-xs font-bold font-mono rounded transition-colors cursor-pointer ${isLight ? 'text-blue-700' : 'text-amber-400'}`}
-            >
-              <span>{currentKey}</span>
-            </button>
-            <button
-              onClick={() => handleUpdateTranspose(transposeSemitones + 1)}
-              className={`px-2 py-1 text-xs font-bold rounded transition-colors cursor-pointer ${isLight ? 'hover:bg-blue-100 text-blue-800' : 'hover:bg-neutral-700 text-neutral-300 hover:text-white'}`}
-            >
-              <Plus className="w-3.5 h-3.5" />
-            </button>
-          </div>
+          <QuickTransposeButton
+            currentKey={currentKey}
+            originalKey={song.key}
+            semitones={transposeSemitones}
+            isLight={isLight}
+            onChange={handleUpdateTranspose}
+          />
 
           <button
             onClick={handleToggleAutoScroll}

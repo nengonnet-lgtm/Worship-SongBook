@@ -1,0 +1,37 @@
+/*
+ * ฟอนต์สำหรับแสดง "คอร์ดเหนือเนื้อเพลง" ให้ตำแหน่งคอร์ดตรงกันทุกอุปกรณ์
+ *
+ * ปัญหา: คอลัมน์คอร์ดเป็นอักษรละติน (monospace) แต่เนื้อเพลงเป็นอักษรไทยซึ่งไม่ใช่ monospace
+ *   - Windows (Consolas): ช่องอักษรละตินกว้าง ~0.55em
+ *   - iPad / iPhone / Mac (SF Mono / Menlo): ช่องอักษรละตินกว้าง ~0.60em
+ *   ส่วนตัวอักษรไทยของทั้งสองระบบกว้างใกล้เคียงกัน (~0.62em) บนไอแพดคอร์ดจึงไถลไปทางขวา
+ *   วัดจากภาพหน้าจอจริง: สัดส่วนตำแหน่งคอร์ดต่อความกว้างเนื้อร้อง บน Windows / iPad = 0.902 (±0.007)
+ *
+ * วิธีแก้: บนเครื่องที่ไม่มี Consolas ใช้ Menlo ที่ย่อความกว้างลง 90% (size-adjust)
+ *   - Windows (มี Consolas) ไม่เปลี่ยนแปลง เพราะ Consolas อยู่หน้าสุดของรายการ
+ *   - ถ้าเบราว์เซอร์ไม่รองรับ size-adjust (Safari < 17) หรือหา Menlo ไม่เจอ จะกลับไปใช้ฟอนต์เดิม ไม่เสียหาย
+ *   - ถ้ายังเหลื่อมเล็กน้อย ปรับค่า size-adjust ได้ (ลดเลข = ช่องคอร์ดแคบลง คอร์ดขยับไปทางซ้าย)
+ */
+@font-face {
+  font-family: 'ChordSheetMenlo';
+  font-style: normal;
+  font-weight: 400;
+  src: local('Menlo Regular'), local('Menlo-Regular'), local('Menlo');
+  size-adjust: 90%;
+}
+
+@font-face {
+  font-family: 'ChordSheetMenlo';
+  font-style: normal;
+  font-weight: 700;
+  src: local('Menlo Bold'), local('Menlo-Bold');
+  size-adjust: 90%;
+}
+
+.chord-sheet-font {
+  font-family: Consolas, 'ChordSheetMenlo', ui-monospace, SFMono-Regular, Menlo, Monaco,
+    'Liberation Mono', 'Courier New', monospace;
+  /* กัน iOS Safari ขยายขนาดตัวอักษรของบรรทัดคอร์ดกับเนื้อร้องไม่เท่ากัน */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}

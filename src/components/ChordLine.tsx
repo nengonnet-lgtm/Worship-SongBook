@@ -1,4 +1,5 @@
 import React from 'react';
+import './chordSheetFont.css';
 import { layoutChordLine } from '../utils/chordProParser';
 import type { ParsedLineItem } from '../utils/chordProParser';
 
@@ -62,7 +63,7 @@ export const ChordLine: React.FC<ChordLineProps> = ({
     if (!text.trim()) return null;
     return (
       <div
-        className={`font-mono leading-tight select-none whitespace-pre ${lyricClassName}`}
+        className={`chord-sheet-font leading-tight select-none whitespace-pre ${lyricClassName}`}
         style={NO_AUTOSIZE}
       >
         {text}
@@ -75,7 +76,7 @@ export const ChordLine: React.FC<ChordLineProps> = ({
   // ---------- โหมด A: ตรงกับ Editor ----------
   if (layout.hasExactColumns) {
     return (
-      <div className="font-mono leading-tight select-none" style={NO_AUTOSIZE}>
+      <div className="chord-sheet-font leading-tight select-none" style={NO_AUTOSIZE}>
         {layout.chordLine.trim() && (
           <div className="whitespace-pre font-bold block" style={{ color: chordColor }}>
             {layout.chordLine.split(/(\s+)/).map((token, tIdx) => {
@@ -106,7 +107,7 @@ export const ChordLine: React.FC<ChordLineProps> = ({
   const hasLyric = items.some((it) => (it.lyric || '').trim().length > 0);
 
   return (
-    <div className="font-mono leading-tight select-none" style={ANCHORED_ROOT_STYLE}>
+    <div className="chord-sheet-font leading-tight select-none" style={ANCHORED_ROOT_STYLE}>
       {items.map((item, idx) => {
         const chord = item.chord || '';
         const lyric = item.lyric || '';

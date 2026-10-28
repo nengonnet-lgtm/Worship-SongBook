@@ -14,14 +14,13 @@ import {
 } from '../utils/chordProFormatter';
 import { ChordHelperSidebar } from './ChordHelperSidebar';
 import { ChordLine } from './ChordLine';
+import './chordSheetFont.css';
 import {
   X,
   Sparkles,
   Save,
   Music,
   ArrowRightLeft,
-  ClipboardPaste,
-  Check,
   Wand2,
   SlidersHorizontal,
   ChevronDown,
@@ -61,11 +60,8 @@ export const SongEditorModal: React.FC<Props> = ({
   );
 
   const [activeTab, setActiveTab] = useState<'editor' | 'preview' | 'split'>('split');
-  const [showPasteModal, setShowPasteModal] = useState(false);
   const [showFormatDropdown, setShowFormatDropdown] = useState(false);
   const [formatFeedback, setFormatFeedback] = useState<{ text: string; type: 'success' | 'info' } | null>(null);
-  const [pasteInput, setPasteInput] = useState('');
-  const [pasteConvertMode, setPasteConvertMode] = useState<'chordpro' | 'raw'>('chordpro');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // สถานะการยุบ/ขยายแถบตัวช่วยแทรกคอร์ดด้านซ้ายมือ (Default: ขยายบนจอใหญ่)
@@ -247,41 +243,6 @@ export const SongEditorModal: React.FC<Props> = ({
       type: 'success'
     });
     setShowFormatDropdown(false);
-  };
-
-  const handleSmartPasteSubmit = () => {
-    if (!pasteInput.trim()) return;
-
-    const titleMatch = pasteInput.match(/(?:เพลง|Title|title):\s*([^\n\r]+)/i);
-    const artistMatch = pasteInput.match(/(?:ศิลปิน|Artist|artist|by):\s*([^\n\r]+)/i);
-    const keyMatch = pasteInput.match(/(?:คีย์|Key|key):\s*([A-G][#b]?m?)/i);
-    const tempoMatch = pasteInput.match(/(?:ความเร็ว|Tempo|BPM|bpm):\s*(\d+)/i);
-
-    if (titleMatch && titleMatch[1].trim() && (title === 'New Song' || !title)) {
-      setTitle(titleMatch[1].trim());
-    }
-    if (artistMatch && artistMatch[1].trim() && !artist) {
-      setArtist(artistMatch[1].trim());
-    }
-    if (keyMatch && keyMatch[1].trim()) {
-      const detectedKey = keyMatch[1].trim().replace(/m$/i, '');
-      if (KEYS.includes(detectedKey)) {
-        setKey(detectedKey);
-      }
-    }
-    if (tempoMatch && tempoMatch[1]) {
-      setTempo(parseInt(tempoMatch[1], 10) || 120);
-    }
-
-    if (pasteConvertMode === 'chordpro') {
-      const converted = convertTextToChordPro(pasteInput);
-      setChordProContent(converted);
-    } else {
-      setChordProContent(pasteInput);
-    }
-
-    setPasteInput('');
-    setShowPasteModal(false);
   };
 
   const handleSave = () => {
@@ -485,16 +446,6 @@ export const SongEditorModal: React.FC<Props> = ({
                 <span>{isChordSidebarCollapsed ? 'แถบคอร์ด ◀' : 'ซ่อนคอร์ด'}</span>
               </button>
 
-              <button
-                type="button"
-                onClick={() => setShowPasteModal(true)}
-                className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-sky-500/20 text-sky-300 border border-sky-500/40 hover:bg-sky-500/30 text-[11px] font-semibold cursor-pointer transition-colors"
-                title="วางคอร์ดและเนื้อเพลงจาก Word หรือ เว็บ"
-              >
-                <ClipboardPaste className="w-3.5 h-3.5" />
-                <span>วางจาก Word / เว็บ</span>
-              </button>
-
               {/* ปุ่มหลัก: จัดรูปแบบ ChordPro */}
               <div className="flex items-center rounded-lg bg-amber-500/20 border border-amber-500/40 p-0.5 shadow-xs">
                 <button
@@ -532,7 +483,7 @@ export const SongEditorModal: React.FC<Props> = ({
             {/* Quick Section Headers and Bracket Insert */}
             <div className="flex items-center gap-1.5 shrink-0">
               <span className="text-[10px] font-semibold text-neutral-500 uppercase">ท่อน:</span>
-              {['{c: Intro}', '{c: Verse 1}', '{c: Verse 2}', '{c: Chorus}', '{c: Bridge}', '{c: Solo}', '{c: Outro}'].map((sec) => (
+              {['{c: Intro}', '{c: Verse 1}', '{c: Verse 2}', '{c: Chorus}', '{c: Bridge}', '{c: Pre-Chorus}', '{c: Outro}'].map((sec) => (
                 <button
                   key={sec}
                   type="button"
@@ -702,7 +653,7 @@ export const SongEditorModal: React.FC<Props> = ({
                 onChange={(e) => setChordProContent(e.target.value)}
                 placeholder={`ตัวอย่างแบบ 2 บรรทัด:\n        D     Bm       G \nความรักมั่นคงของพระเจ้า ไม่เคยยั้งหยุด\n\nหรือพิมพ์แบบ ChordPro:\nความรักมั่น[D]คงของพระ[Bm]เจ้า ไม่เคยยั้ง[G]หยุด`}
                 spellCheck={false}
-                className="flex-1 w-full p-4 bg-neutral-950 font-mono text-sm leading-relaxed text-neutral-200 resize-none focus:outline-none focus:ring-0"
+                className="flex-1 w-full p-4 bg-neutral-950 chord-sheet-font text-sm leading-relaxed text-neutral-200 resize-none focus:outline-none focus:ring-0"
               />
             </div>
           )}
@@ -765,85 +716,6 @@ export const SongEditorModal: React.FC<Props> = ({
         </div>
       </div>
 
-      {/* Smart Paste Modal */}
-      {showPasteModal && (
-        <div className="fixed inset-0 z-60 bg-black/80 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5">
-          <div className="w-full max-w-2xl bg-neutral-900 border border-neutral-700 rounded-2xl shadow-2xl overflow-hidden flex flex-col text-neutral-100">
-            <div className="p-4 border-b border-neutral-800 bg-neutral-950 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <ClipboardPaste className="w-5 h-5 text-sky-400" />
-                <h3 className="font-bold text-base">วางคอร์ดจาก Word หรือ เว็บ (Smart Paste)</h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowPasteModal(false)}
-                className="p-1 rounded-md text-neutral-400 hover:text-white hover:bg-neutral-800 cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="p-4 space-y-3">
-              <p className="text-xs text-neutral-400 leading-relaxed">
-                คัดลอก (Copy) คอร์ดและเนื้อเพลงแบบ 2 บรรทัดจากไฟล์ Word, TXT, หรือเว็บคอร์ดเพลง แล้วนำมาวาง (Paste) ลงในช่องนี้ ระบบจะคำนวณตำแหน่งสระ วรรณยุกต์ และคอร์ดภาษาไทยให้อย่างแม่นยำอัตโนมัติ
-              </p>
-
-              <textarea
-                value={pasteInput}
-                onChange={(e) => setPasteInput(e.target.value)}
-                placeholder={`วางข้อความที่นี่ เช่น:\n        D     Bm       G \nความรักมั่นคงของพระเจ้า ไม่เคยยั้งหยุด`}
-                rows={9}
-                className="w-full p-3.5 rounded-xl bg-neutral-950 border border-neutral-700 font-mono text-xs sm:text-sm text-neutral-200 resize-none focus:outline-none focus:border-sky-400 leading-relaxed"
-              />
-
-              <div className="flex items-center justify-between pt-1 text-xs">
-                <span className="text-neutral-400 font-medium">รูปแบบผลลัพธ์:</span>
-                <div className="flex items-center gap-2">
-                  <label className="flex items-center gap-1.5 cursor-pointer text-neutral-300">
-                    <input
-                      type="radio"
-                      name="pasteMode"
-                      checked={pasteConvertMode === 'chordpro'}
-                      onChange={() => setPasteConvertMode('chordpro')}
-                      className="accent-sky-400"
-                    />
-                    <span>แปลงเป็น ChordPro [คอร์ด] (แนะนำ)</span>
-                  </label>
-                  <label className="flex items-center gap-1.5 cursor-pointer text-neutral-300 ml-2">
-                    <input
-                      type="radio"
-                      name="pasteMode"
-                      checked={pasteConvertMode === 'raw'}
-                      onChange={() => setPasteConvertMode('raw')}
-                      className="accent-sky-400"
-                    />
-                    <span>เก็บแบบ 2 บรรทัด</span>
-                  </label>
-                </div>
-              </div>
-            </div>
-
-            <div className="p-4 border-t border-neutral-800 bg-neutral-950 flex items-center justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setShowPasteModal(false)}
-                className="px-3.5 py-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-300 text-xs font-semibold cursor-pointer"
-              >
-                ยกเลิก
-              </button>
-              <button
-                type="button"
-                onClick={handleSmartPasteSubmit}
-                disabled={!pasteInput.trim()}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs disabled:opacity-40 cursor-pointer shadow-sm transition-colors"
-              >
-                <Check className="w-4 h-4" />
-                <span>แทรกลงในเพลง</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

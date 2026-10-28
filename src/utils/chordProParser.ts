@@ -3,12 +3,16 @@ import {
   normalizeThaiText,
   fixThaiChordProGraphemes,
   sanitizeParsedLineItems,
+  getThaiVisualLength,
   THAI_COMBINING_REGEX
 } from './thaiText';
 
 export interface ParsedLineItem {
   lyric: string;
   chord?: string;
+  // คอลัมน์เดิมของคอร์ดในช่อง Editor แบบ 2 บรรทัด (นับเฉพาะตัวอักษรหลัก ไม่นับสระบน/ล่าง/วรรณยุกต์)
+  // ใช้วางคอร์ดให้ตรงกับที่เห็นใน Editor เป๊ะ แม้ตำแหน่งยึดใน ChordPro จะถูกเลื่อนเพื่อไม่ให้ตัดหน่วยอักขระไทย
+  col?: number;
 }
 
 export interface ParsedLine {
@@ -68,10 +72,20 @@ export function isChordLine(line: string): boolean {
 }
 
 export function convertStandaloneChordLine(line: string): string {
+  return convertStandaloneChordLineWithCols(line).text;
+}
+
+// เหมือน convertStandaloneChordLine แต่คืนคอลัมน์เดิมของแต่ละคอร์ดมาด้วย
+export function convertStandaloneChordLineWithCols(line: string): { text: string; cols?: number[] } {
   const cleanLine = splitGluedChords(line);
-  if (cleanLine.includes('[') && cleanLine.includes(']')) return cleanLine;
+  if (cleanLine.includes('[') && cleanLine.includes(']')) return { text: cleanLine };
   const regex = new RegExp(CHORD_EXTRACT_REGEX.source, 'g');
-  return cleanLine.replace(regex, '[$1]');
+  const cols: number[] = [];
+  const text = cleanLine.replace(regex, (_match: string, chord: string, offset: number) => {
+    cols.push(getThaiVisualLength(cleanLine.slice(0, offset)));
+    return `[${chord}]`;
+  });
+  return { text, cols };
 }
 
 export function hasTwoLineChordFormat(text: string): boolean {
@@ -106,9 +120,23 @@ export function checkIfChordOnly(items: ParsedLineItem[]): boolean {
 // ฟังก์ชันแปลงข้อความแบบ 2 บรรทัด (คอร์ดบน-เนื้อล่าง) ให้เป็นรูปแบบ ChordPro [คอร์ด]
 export function convert2LinesToChordPro(text: string): string {
   if (!text) return text;
+  return convert2LinesToChordProWithCols(text).text;
+}
+
+// เหมือน convert2LinesToChordPro แต่คืน "คอลัมน์เดิมของคอร์ดในบรรทัดคอร์ด" ของแต่ละบรรทัดผลลัพธ์มาด้วย
+// (cols[i] ตรงกับบรรทัดที่ i ของ text; undefined = บรรทัดนั้นไม่มีคอลัมน์ต้นฉบับ)
+export function convert2LinesToChordProWithCols(
+  text: string
+): { text: string; cols: (number[] | undefined)[] } {
+  if (!text) return { text, cols: [] };
   const cleanInput = normalizeThaiText(text);
   const lines = cleanInput.split('\n');
   const resultLines: string[] = [];
+  const resultCols: (number[] | undefined)[] = [];
+  const pushLine = (line: string, cols?: number[]) => {
+    resultLines.push(line);
+    resultCols.push(cols);
+  };
   let inInstrumentalSection = false;
 
   for (let i = 0; i < lines.length; i++) {
@@ -119,7 +147,7 @@ export function convert2LinesToChordPro(text: string): string {
     // ตรวจสอบหัวข้อท่อนดนตรีบรรเลงล้วน เช่น [Intro], Intro:, [Solo]
     if (INSTRUMENTAL_HEADER_REGEX.test(trimmed)) {
       inInstrumentalSection = true;
-      resultLines.push(currentLine);
+      pushLine(currentLine);
       continue;
     }
 
@@ -131,7 +159,8 @@ export function convert2LinesToChordPro(text: string): string {
 
     // กรณี 1: บรรทัดขึ้นต้นด้วย Intro / Solo / Outro เช่น "Intro : G Em C D" หรือ "Intro : C / Am / F / G (2 รอบ)"
     if (INTRO_PREFIX_REGEX.test(trimmed)) {
-      resultLines.push(convertStandaloneChordLine(currentLine));
+      const standalone = convertStandaloneChordLineWithCols(currentLine);
+      pushLine(standalone.text, standalone.cols);
       continue;
     }
 
@@ -149,7 +178,8 @@ export function convert2LinesToChordPro(text: string): string {
 
       // หากไม่มีเนื้อร้องด้านล่าง เช่น คอร์ดเดี่ยวๆ ในท่อน Intro ท้ายท่อน หรือท่อน Solo
       if (!hasValidLyricNext) {
-        resultLines.push(convertStandaloneChordLine(currentLine));
+        const standalone = convertStandaloneChordLineWithCols(currentLine);
+        pushLine(standalone.text, standalone.cols);
         continue;
       }
 
@@ -166,7 +196,7 @@ export function convert2LinesToChordPro(text: string): string {
       }
 
       if (chordMatches.length === 0) {
-        resultLines.push(currentLine);
+        pushLine(currentLine);
         continue;
       }
 
@@ -229,14 +259,17 @@ export function convert2LinesToChordPro(text: string): string {
         chordMatchIdx++;
       }
 
-      resultLines.push(fixThaiChordProGraphemes(merged));
+      pushLine(
+        fixThaiChordProGraphemes(merged),
+        chordMatches.map((m) => m.index)
+      );
       i++; // ข้ามบรรทัดเนื้อร้องเพราะรวมแล้ว
     } else {
-      resultLines.push(currentLine);
+      pushLine(currentLine);
     }
   }
 
-  return resultLines.join('\n');
+  return { text: resultLines.join('\n'), cols: resultCols };
 }
 
 // ฟังก์ชันหลักสำหรับ Parse เนื้อเพลงและคอร์ด
@@ -249,9 +282,12 @@ export function parseChordPro(
 ): ParsedSong {
   // 1. Normalize ภาษาไทย และแปลงรูปแบบ 2 บรรทัดเป็น ChordPro
   const cleanInput = normalizeThaiText(content || '');
-  const chordProText = fixThaiChordProGraphemes(convert2LinesToChordPro(cleanInput));
+  const converted = convert2LinesToChordProWithCols(cleanInput);
+  const chordProText = fixThaiChordProGraphemes(converted.text);
 
   const lines = chordProText.split('\n');
+  // คอลัมน์คอร์ดดั้งเดิมจาก Editor ใช้ได้เมื่อจำนวนบรรทัดยังตรงกันทุกบรรทัดเท่านั้น
+  const lineCols = lines.length === converted.cols.length ? converted.cols : [];
   const sections: ParsedSection[] = [];
   const allChordsSet = new Set<string>();
 
@@ -260,7 +296,10 @@ export function parseChordPro(
     lines: []
   };
 
-  for (const rawLine of lines) {
+  for (let lineIdx = 0; lineIdx < lines.length; lineIdx++) {
+    const rawLine = lines[lineIdx];
+    const originalCols = lineCols[lineIdx];
+    let chordSeq = 0;
     // ซ่อมแซมหน่วยอักขระไทยในแต่ละบรรทัด
     const line = fixThaiChordProGraphemes(splitGluedChords(rawLine.trimEnd()));
 
@@ -363,10 +402,19 @@ export function parseChordPro(
 
       items.push({
         chord: transposedChord,
-        lyric: ''
+        lyric: '',
+        col: originalCols ? originalCols[chordSeq] : undefined
       });
+      chordSeq++;
 
       lastIndex = chordRegex.lastIndex;
+    }
+
+    // จำนวนคอร์ดไม่ตรงกับคอลัมน์ต้นฉบับ (เช่น มีหัวข้อ [Intro] ปนในบรรทัด) -> ไม่ใช้คอลัมน์ของบรรทัดนี้
+    if (originalCols && chordSeq !== originalCols.length) {
+      items.forEach((it) => {
+        delete it.col;
+      });
     }
 
     const remainingLyric = line.slice(lastIndex);
@@ -395,4 +443,45 @@ export function parseChordPro(
     sections: sections.length > 0 ? sections : [{ title: '', lines: [] }],
     allChords: Array.from(allChordsSet)
   };
+}
+
+export interface ChordLineLayout {
+  chordLine: string;
+  lyricLine: string;
+  // true = ทุกคอร์ดมีคอลัมน์ต้นฉบับจาก Editor (วางตรงกับ Editor ได้เป๊ะ)
+  hasExactColumns: boolean;
+}
+
+/**
+ * สร้างข้อความ 2 บรรทัด (คอร์ดบน-เนื้อล่าง) จาก items ของ 1 บรรทัด
+ * - ถ้ามีคอลัมน์ต้นฉบับ (col) จะวางคอร์ดที่คอลัมน์นั้นเสมอ จึงตรงกับช่อง Editor
+ * - เว้นอย่างน้อย 1 ช่องว่างจากคอร์ดก่อนหน้า (กรณี Transpose แล้วคอร์ดยาวขึ้น)
+ * - ถ้าไม่มี col ใช้ตำแหน่งตัวอักษรหลักของเนื้อร้องแทน
+ */
+export function layoutChordLine(items: ParsedLineItem[]): ChordLineLayout {
+  let chordLine = '';
+  let lyricLine = '';
+  let lyricVisualLen = 0;
+  let chordCount = 0;
+  let allHaveCols = true;
+
+  for (const item of items) {
+    if (item.chord) {
+      chordCount++;
+      let target = lyricVisualLen;
+      if (typeof item.col === 'number') {
+        target = item.col;
+      } else {
+        allHaveCols = false;
+      }
+      const minPos = chordLine.length > 0 ? chordLine.length + 1 : 0;
+      chordLine = chordLine.padEnd(Math.max(target, minPos), ' ') + item.chord;
+    }
+
+    const lyric = item.lyric || '';
+    lyricLine += lyric;
+    lyricVisualLen += getThaiVisualLength(lyric);
+  }
+
+  return { chordLine, lyricLine, hasExactColumns: chordCount > 0 && allHaveCols };
 }

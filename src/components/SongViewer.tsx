@@ -5,6 +5,7 @@ import { transposeKey, getSemitonesBetweenKeys } from '../utils/chordUtils';
 import { formatChordPro } from '../utils/chordProFormatter';
 import { ChordDiagramVisualizer } from './ChordDiagramVisualizer';
 import { QuickActionsSheet } from './QuickActionsSheet';
+import { ChordLine } from './ChordLine';
 import {
   ChevronLeft,
   ChevronRight,
@@ -43,8 +44,6 @@ interface Props {
   onKeyChange?: (newKey: string, semitones: number) => void;
   isEmbedded?: boolean;
 }
-
-import { getThaiVisualLength } from '../utils/thaiText';
 
 export const SongViewer: React.FC<Props> = ({
   song,
@@ -407,7 +406,7 @@ export const SongViewer: React.FC<Props> = ({
         </div>
       )}
 
-      {/* MAIN DISPLAY AREA (SAME MONOSPACE 2-LINE FORMAT AS SONG EDITOR MODAL PREVIEW) */}
+      {/* MAIN DISPLAY AREA (คอร์ดผูกกับตัวอักษรเนื้อร้อง ตำแหน่งตรงกับ Song Editor ทุกอุปกรณ์) */}
       <div
         ref={scrollContainerRef}
         className="flex-1 overflow-y-auto px-4 sm:px-8 md:px-12 py-6"
@@ -438,64 +437,21 @@ export const SongViewer: React.FC<Props> = ({
                   );
                 }
 
-                // คำนวณ Plain Text 2 บรรทัดเหมือนในส่วน preview ของ SongEditorModal
-                let chordLineStr = '';
-                let lyricLineStr = '';
-                let currentPos = 0;
-
-                const getVisualLen = (str: string) => getThaiVisualLength(str);
-
-                line.items?.forEach((item) => {
-                  const chord = item.chord || '';
-                  const lyric = item.lyric || '';
-
-                  if (chord) {
-                    const padding = Math.max(0, currentPos - getVisualLen(chordLineStr));
-                    chordLineStr += ' '.repeat(padding) + chord;
-                  }
-
-                  lyricLineStr += lyric;
-
-                  const chordVisLen = chord ? getVisualLen(chord) : 0;
-                  const lyricVisLen = getVisualLen(lyric);
-                  currentPos += Math.max(chordVisLen, lyricVisLen);
-                });
-
-                if (!chordLineStr.trim() && !lyricLineStr.trim()) {
+                // แสดงคอร์ดผูกกับตำแหน่งเนื้อร้องโดยตรง (ไม่ขึ้นกับความกว้างฟอนต์ ตรงกันทุกอุปกรณ์)
+                const items = line.items ?? [];
+                if (items.every((it) => !it.chord && !(it.lyric || '').trim())) {
                   return <div key={lIdx} className="h-3" />;
                 }
 
                 return (
-                  <div key={lIdx} className="font-mono leading-tight select-none mb-3">
-                    {/* บรรทัดคอร์ด */}
-                    {settings.showChords !== false && chordLineStr.trim() && (
-                      <div
-                        className="whitespace-pre font-bold block"
-                        style={{ color: chordsColor }}
-                      >
-                        {chordLineStr.split(/(\s+)/).map((token, tIdx) => {
-                          if (token && token.trim()) {
-                            return (
-                              <span
-                                key={tIdx}
-                                onClick={() => setActiveChordDiagram(token)}
-                                className="cursor-pointer hover:underline transition-opacity active:opacity-70"
-                                title={`ดูคอร์ด ${token}`}
-                              >
-                                {token}
-                              </span>
-                            );
-                          }
-                          return token;
-                        })}
-                      </div>
-                    )}
-                    {/* บรรทัดเนื้อเพลง */}
-                    {lyricLineStr ? (
-                      <div className={`whitespace-pre block ${isLight ? 'text-slate-800' : 'text-neutral-200'}`}>
-                        {lyricLineStr}
-                      </div>
-                    ) : null}
+                  <div key={lIdx} className="mb-3">
+                    <ChordLine
+                      items={items}
+                      showChords={settings.showChords !== false}
+                      chordColor={chordsColor}
+                      lyricClassName={isLight ? 'text-slate-800' : 'text-neutral-200'}
+                      onChordClick={(chord) => setActiveChordDiagram(chord)}
+                    />
                   </div>
                 );
               })}

@@ -13,7 +13,7 @@ import {
   syncMetadataToChordPro
 } from '../utils/chordProFormatter';
 import { ChordHelperSidebar } from './ChordHelperSidebar';
-import { getThaiVisualLength } from '../utils/thaiText';
+import { ChordLine } from './ChordLine';
 import {
   X,
   Sparkles,
@@ -744,44 +744,16 @@ export const SongEditorModal: React.FC<Props> = ({
               );
             }
 
-            // คำนวณ Plain Text 2 บรรทัดสำหรับ Preview
-            let chordLineStr = '';
-            let lyricLineStr = '';
-            let currentPos = 0;
-
-            const getVisualLen = (str: string) => getThaiVisualLength(str);
-
-            line.items?.forEach((item) => {
-              const chord = item.chord || '';
-              const lyric = item.lyric || '';
-
-              if (chord) {
-                const padding = Math.max(0, currentPos - getVisualLen(chordLineStr));
-                chordLineStr += ' '.repeat(padding) + chord;
-              }
-
-              lyricLineStr += lyric;
-
-              const chordVisLen = chord ? getVisualLen(chord) : 0;
-              const lyricVisLen = getVisualLen(lyric);
-              currentPos += Math.max(chordVisLen, lyricVisLen);
-            });
+            // แสดงคอร์ดผูกกับตำแหน่งเนื้อร้องโดยตรง (ไม่ขึ้นกับความกว้างฟอนต์ ตรงกันทุกอุปกรณ์)
+            const items = line.items ?? [];
 
             return (
-              <div key={lIdx} className="font-mono leading-tight select-none mb-3">
-                {/* บรรทัดคอร์ด */}
-                {chordLineStr.trim() && (
-                  <div
-                    className="whitespace-pre font-bold block"
-                    style={{ color: settings.chordsColor || '#38bdf8' }}
-                  >
-                    {chordLineStr}
-                  </div>
-                )}
-                {/* บรรทัดเนื้อเพลง */}
-                <div className="whitespace-pre block text-neutral-200">
-                  {lyricLineStr}
-                </div>
+              <div key={lIdx} className="mb-3">
+                <ChordLine
+                  items={items}
+                  chordColor={settings.chordsColor || '#38bdf8'}
+                  lyricClassName="text-neutral-200"
+                />
               </div>
             );
           })}

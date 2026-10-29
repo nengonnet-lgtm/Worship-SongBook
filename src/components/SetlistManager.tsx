@@ -254,9 +254,6 @@ const AddSongsDialog: React.FC<{
                     />
                     <span className="min-w-0 flex-1">
                       <span className="block text-sm font-semibold truncate">{song.title}</span>
-                      <span className={`block text-xs truncate ${t.textMuted}`}>
-                        {song.artist || 'Unknown'}
-                      </span>
                     </span>
                     {already && (
                       <span className={`text-xs shrink-0 flex items-center gap-1 ${t.accentText}`}>
@@ -265,7 +262,7 @@ const AddSongsDialog: React.FC<{
                       </span>
                     )}
                     <span
-                      className={`shrink-0 px-2 py-0.5 rounded-md border font-mono font-bold text-sm ${t.keyBadge}`}
+                      className={`shrink-0 w-10 h-10 rounded-xl border flex items-center justify-center font-keys font-bold text-base ${t.keyBadge}`}
                     >
                       {song.key}
                     </span>
@@ -416,142 +413,159 @@ export const SetlistManager: React.FC<Props> = ({
     <div className={`flex-1 flex flex-col md:flex-row h-full w-full overflow-hidden ${t.page}`}>
       {/* LEFT PANE */}
       <div
-        className={`w-full md:w-80 lg:w-96 md:border-r flex flex-col shrink-0 h-full overflow-hidden ${t.subBar}`}
+        className={`w-full md:w-[372px] md:border-r flex flex-col shrink-0 h-full overflow-hidden ${t.subBar}`}
       >
         {/* Header */}
-        <div className={`p-3 border-b flex items-center gap-2 shrink-0 ${t.bar}`}>
-          <button
-            type="button"
-            onClick={onOpenMenu}
-            aria-label="Open navigation menu"
-            title="Open Navigation Menu"
-            className={`w-11 h-11 shrink-0 flex items-center justify-center rounded-lg cursor-pointer transition-colors motion-reduce:transition-none ${t.iconBtn} ${t.focus}`}
-          >
-            <Menu className="w-5 h-5" aria-hidden="true" />
-          </button>
-
-          {/* Set switcher */}
-          <div ref={switcherRef} className="relative min-w-0 flex-1">
+        <div className="px-5 pt-5 pb-4 shrink-0">
+          <div className="flex items-center gap-2">
             <button
-              ref={switcherTriggerRef}
               type="button"
-              onClick={() => setShowSetSwitcher((v) => !v)}
-              aria-haspopup="menu"
-              aria-expanded={showSetSwitcher}
-              title="Switch Set"
-              className={`w-full h-11 px-3 rounded-lg border flex items-center justify-between gap-2 text-left cursor-pointer transition-colors motion-reduce:transition-none ${t.ghostBtn} ${t.focus}`}
+              onClick={onOpenMenu}
+              aria-label="Open navigation menu"
+              title="Open Navigation Menu"
+              className={`md:hidden w-11 h-11 shrink-0 flex items-center justify-center rounded-xl cursor-pointer transition-colors motion-reduce:transition-none ${t.iconBtn} ${t.focus}`}
             >
-              <span className="min-w-0 flex flex-col">
-                <span className="font-bold text-sm truncate leading-tight">
-                  {activeSetlist ? activeSetlist.title : 'Select Setlist'}
-                </span>
-                <span className={`text-xs font-mono leading-tight ${t.textMuted}`}>
-                  {activeSongs.length} songs, ~{totalDurationMinutes}m
-                </span>
-              </span>
-              <ChevronDown
-                className={`w-4 h-4 opacity-60 shrink-0 transition-transform motion-reduce:transition-none ${
-                  showSetSwitcher ? 'rotate-180' : ''
-                }`}
-                aria-hidden="true"
-              />
+              <Menu className="w-5 h-5" aria-hidden="true" />
             </button>
 
-            {showSetSwitcher && (
-              <div
-                role="menu"
-                aria-label="Your setlists"
-                className={`absolute left-0 top-full mt-1.5 w-72 max-w-[calc(100vw-1.5rem)] rounded-xl border shadow-2xl z-40 overflow-hidden ${t.popover}`}
+            {/* Set switcher */}
+            <div ref={switcherRef} className="relative min-w-0 flex-1">
+              <button
+                ref={switcherTriggerRef}
+                type="button"
+                onClick={() => setShowSetSwitcher((v) => !v)}
+                aria-haspopup="menu"
+                aria-expanded={showSetSwitcher}
+                title="เลือกหรือสลับเซ็ตลิสต์"
+                className={`w-full min-h-11 rounded-xl flex items-center justify-between gap-2 text-left cursor-pointer ${t.focus}`}
               >
-                <div className={`px-3.5 py-2.5 text-sm font-semibold border-b ${t.popoverDivider}`}>
-                  Your setlists
-                </div>
-                <div className="max-h-64 overflow-y-auto py-1">
-                  {setlists.length === 0 && (
-                    <p className={`px-3.5 py-3 text-sm ${t.textMuted}`}>ยังไม่มีเซ็ตลิสต์</p>
-                  )}
-                  {setlists.map((sl) => {
-                    const isActive = activeSetlist?.id === sl.id;
-                    return (
-                      <div key={sl.id} className="flex items-stretch">
-                        <button
-                          type="button"
-                          role="menuitemradio"
-                          aria-checked={isActive}
-                          onClick={() => {
-                            onSelectSetlist(sl);
-                            setShowSetSwitcher(false);
-                            switcherTriggerRef.current?.focus();
-                          }}
-                          className={`flex-1 min-w-0 min-h-12 pl-3.5 pr-2 py-2 flex items-center gap-2 text-left cursor-pointer transition-colors motion-reduce:transition-none ${t.popoverItem} ${t.focusInset}`}
-                        >
-                          <span className="min-w-0 flex-1 flex flex-col">
-                            <span className={`text-sm truncate ${isActive ? `font-bold ${t.accentText}` : ''}`}>
-                              {sl.title}
+                <span className="min-w-0 flex flex-col">
+                  <span className="font-display font-semibold text-[22px] sm:text-[24px] leading-tight truncate">
+                    {activeSetlist ? activeSetlist.title : 'เลือกเซ็ตลิสต์'}
+                  </span>
+                  <span className={`text-[13px] ${t.textMuted}`}>
+                    {activeSongs.length} เพลง, ~{totalDurationMinutes} นาที
+                  </span>
+                </span>
+                <ChevronDown
+                  className={`w-4 h-4 opacity-60 shrink-0 transition-transform motion-reduce:transition-none ${
+                    showSetSwitcher ? 'rotate-180' : ''
+                  }`}
+                  aria-hidden="true"
+                />
+              </button>
+
+              {showSetSwitcher && (
+                <div
+                  role="menu"
+                  aria-label="Your setlists"
+                  className={`absolute left-0 top-full mt-1.5 w-72 max-w-[calc(100vw-1.5rem)] rounded-xl border shadow-2xl z-40 overflow-hidden ${t.popover}`}
+                >
+                  <div className={`px-3.5 py-2.5 text-sm font-semibold border-b ${t.popoverDivider}`}>
+                    เซ็ตลิสต์ของคุณ
+                  </div>
+                  <div className="max-h-64 overflow-y-auto py-1">
+                    {setlists.length === 0 && (
+                      <p className={`px-3.5 py-3 text-sm ${t.textMuted}`}>ยังไม่มีเซ็ตลิสต์</p>
+                    )}
+                    {setlists.map((sl) => {
+                      const isActive = activeSetlist?.id === sl.id;
+                      return (
+                        <div key={sl.id} className="flex items-stretch">
+                          <button
+                            type="button"
+                            role="menuitemradio"
+                            aria-checked={isActive}
+                            onClick={() => {
+                              onSelectSetlist(sl);
+                              setShowSetSwitcher(false);
+                              switcherTriggerRef.current?.focus();
+                            }}
+                            className={`flex-1 min-w-0 min-h-12 pl-3.5 pr-2 py-2 flex items-center gap-2 text-left cursor-pointer transition-colors motion-reduce:transition-none ${t.popoverItem} ${t.focusInset}`}
+                          >
+                            <span className="min-w-0 flex-1 flex flex-col">
+                              <span className={`text-sm truncate ${isActive ? `font-bold ${t.accentText}` : ''}`}>
+                                {sl.title}
+                              </span>
+                              <span className={`text-xs font-mono ${t.textMuted}`}>{sl.songIds.length} songs</span>
                             </span>
-                            <span className={`text-xs font-mono ${t.textMuted}`}>{sl.songIds.length} songs</span>
-                          </span>
-                          {isActive && (
-                            <Check className={`w-4 h-4 shrink-0 ${t.accentText}`} aria-hidden="true" />
-                          )}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setShowSetSwitcher(false);
-                            setPendingDeleteSet(sl);
-                          }}
-                          aria-label={`ลบเซ็ตลิสต์ “${sl.title}”`}
-                          title="Delete setlist"
-                          className={`w-11 shrink-0 flex items-center justify-center cursor-pointer ${t.iconBtnDanger} ${t.focusInset}`}
-                        >
-                          <Trash2 className="w-4 h-4" aria-hidden="true" />
-                        </button>
-                      </div>
-                    );
-                  })}
+                            {isActive && (
+                              <Check className={`w-4 h-4 shrink-0 ${t.accentText}`} aria-hidden="true" />
+                            )}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowSetSwitcher(false);
+                              setPendingDeleteSet(sl);
+                            }}
+                            aria-label={`ลบเซ็ตลิสต์ “${sl.title}”`}
+                            title="Delete setlist"
+                            className={`w-11 shrink-0 flex items-center justify-center cursor-pointer ${t.iconBtnDanger} ${t.focusInset}`}
+                          >
+                            <Trash2 className="w-4 h-4" aria-hidden="true" />
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className={`p-2 border-t ${t.popoverDivider}`}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowSetSwitcher(false);
+                        setShowCreateModal(true);
+                      }}
+                      className={`w-full h-10 rounded-lg text-sm font-semibold flex items-center justify-center gap-1.5 cursor-pointer ${t.accentBtn} ${t.focus}`}
+                    >
+                      <Plus className="w-4 h-4" aria-hidden="true" />
+                      สร้างเซ็ตลิสต์ใหม่
+                    </button>
+                  </div>
                 </div>
-                <div className={`p-2 border-t ${t.popoverDivider}`}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowSetSwitcher(false);
-                      setShowCreateModal(true);
-                    }}
-                    className={`w-full h-10 rounded-lg text-sm font-semibold flex items-center justify-center gap-1.5 cursor-pointer ${t.accentBtn} ${t.focus}`}
-                  >
-                    <Plus className="w-4 h-4" aria-hidden="true" />
-                    Create New Set
-                  </button>
-                </div>
-              </div>
-            )}
+              )}
+            </div>
+
+            {/* ปุ่มสร้างเซ็ตลิสต์โดดเด่น เห็นได้ชัดเจนทันที */}
+            <button
+              type="button"
+              onClick={() => setShowCreateModal(true)}
+              aria-label="สร้างเซ็ตลิสต์ใหม่"
+              title="สร้างเซ็ตลิสต์ใหม่ (Create Setlist)"
+              className={`h-11 px-3 sm:px-3.5 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 cursor-pointer shrink-0 transition-all shadow-xs ${t.accentBtn} ${t.focus}`}
+            >
+              <Plus className="w-4 h-4" strokeWidth={2.5} aria-hidden="true" />
+              <span>สร้างเซ็ตลิสต์</span>
+            </button>
           </div>
 
-          <button
-            type="button"
-            onClick={openAddSongs}
-            disabled={!activeSetlist}
-            aria-label="Add songs to this set"
-            title="Add songs to this set"
-            className={`h-10 px-2.5 lg:px-3.5 shrink-0 rounded-lg text-sm font-bold flex items-center gap-1 cursor-pointer disabled:opacity-40 disabled:pointer-events-none ${t.accentBtn} ${t.focus}`}
-          >
-            <Plus className="w-4 h-4" aria-hidden="true" />
-            <span className="hidden lg:inline">Add</span>
-          </button>
-
-          {activeSetlist && (
+          <div className="mt-4 flex items-center gap-2.5">
             <button
               type="button"
-              onClick={() => onStartPerformance(activeSetlist, selectedSongIdx)}
-              disabled={activeSongs.length === 0}
-              aria-label="Fullscreen stage mode"
-              title="Fullscreen Stage Mode"
-              className={`${toolBtn} w-10 shrink-0 ${t.accentText}`}
+              onClick={openAddSongs}
+              disabled={!activeSetlist}
+              aria-label="Add songs to this set"
+              title="เพิ่มเพลงเข้าเซ็ตนี้"
+              className={`h-11 flex-1 rounded-xl text-[15px] font-display font-medium flex items-center justify-center gap-1.5 cursor-pointer transition-colors motion-reduce:transition-none disabled:opacity-40 disabled:pointer-events-none ${t.ghostBtn} border border-current ${t.focus}`}
             >
-              <Maximize2 className="w-4 h-4" aria-hidden="true" />
+              <Plus className="w-4 h-4" aria-hidden="true" />
+              เพิ่มเพลง (+ Add)
             </button>
-          )}
+
+            {activeSetlist && (
+              <button
+                type="button"
+                onClick={() => onStartPerformance(activeSetlist, selectedSongIdx)}
+                disabled={activeSongs.length === 0}
+                aria-label="Fullscreen stage mode"
+                title="โหมดเวทีเต็มจอ (Stage Mode)"
+                className={`h-11 px-4 shrink-0 rounded-xl text-[15px] font-display font-medium flex items-center justify-center gap-2 cursor-pointer transition-colors motion-reduce:transition-none disabled:opacity-40 disabled:pointer-events-none ${t.ghostBtn} ${t.focus}`}
+              >
+                <Maximize2 className="w-4 h-4" aria-hidden="true" />
+                Stage mode
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Reorder toggle: move / remove buttons only appear while this is on, so they cannot be hit by accident */}
@@ -599,7 +613,7 @@ export const SetlistManager: React.FC<Props> = ({
               </button>
             </div>
           ) : (
-            <ol className="space-y-1.5">
+            <ol className="space-y-2">
               {entries.map(({ song }, index) => {
                 const isSelected = index === selectedSongIdx;
                 const setKey = activeSetlist?.songKeys?.[song.id];
@@ -609,7 +623,7 @@ export const SetlistManager: React.FC<Props> = ({
                 return (
                   <li
                     key={`${song.id}-${index}`}
-                    className={`rounded-xl border transition-colors motion-reduce:transition-none ${
+                    className={`rounded-2xl border transition-colors motion-reduce:transition-none ${
                       isSelected ? t.cardSelected : t.cardIdle
                     }`}
                   >
@@ -618,24 +632,17 @@ export const SetlistManager: React.FC<Props> = ({
                         type="button"
                         onClick={() => setSelectedSongIdx(index)}
                         aria-current={isSelected ? 'true' : undefined}
-                        className={`flex-1 min-w-0 flex items-center gap-3 p-3 text-left rounded-xl cursor-pointer ${t.focus}`}
+                        className={`flex-1 min-w-0 flex items-center gap-3.5 p-3 text-left rounded-2xl cursor-pointer ${t.focus}`}
                       >
                         <span
-                          className={`w-7 h-7 rounded-md flex items-center justify-center font-mono font-bold text-xs shrink-0 ${
+                          className={`w-8 h-8 rounded-[10px] flex items-center justify-center font-keys font-bold text-sm shrink-0 ${
                             isSelected ? t.numberOn : t.numberOff
                           }`}
                         >
                           {index + 1}
                         </span>
                         <span className="min-w-0 flex-1">
-                          <span className="block font-semibold text-sm truncate leading-tight">{song.title}</span>
-                          <span className={`mt-0.5 flex flex-wrap items-center gap-x-2.5 text-xs ${t.textMuted}`}>
-                            <span className="truncate">{song.artist || 'Unknown'}</span>
-                            {song.tempo ? <span className="font-mono">{song.tempo} BPM</span> : null}
-                            {song.capo > 0 ? (
-                              <span className={`font-semibold ${t.accentText}`}>Capo {song.capo}</span>
-                            ) : null}
-                          </span>
+                          <span className="block font-display font-semibold text-[17px] truncate leading-tight">{song.title}</span>
                         </span>
                         <span className="shrink-0 flex flex-col items-end gap-0.5">
                           <span
@@ -644,14 +651,14 @@ export const SetlistManager: React.FC<Props> = ({
                                 ? `Setlist Key: ${effectiveKey} (Original: ${song.key})`
                                 : `Key: ${song.key}`
                             }
-                            className={`px-2 py-0.5 rounded-md border font-mono font-bold text-sm ${
+                            className={`w-12 h-12 rounded-xl border flex items-center justify-center font-keys font-bold text-lg ${
                               isTransposed ? t.accentSoft : t.keyBadge
                             }`}
                           >
                             {effectiveKey}
                           </span>
                           {isTransposed && (
-                            <span className={`text-xs font-mono ${t.textMuted}`}>orig {song.key}</span>
+                            <span className={`text-xs font-keys ${t.textMuted}`}>orig {song.key}</span>
                           )}
                         </span>
                       </button>
@@ -704,10 +711,11 @@ export const SetlistManager: React.FC<Props> = ({
               type="button"
               onClick={() => setSelectedSongIdx(Math.max(0, selectedSongIdx - 1))}
               disabled={selectedSongIdx === 0}
+              title="เพลงก่อนหน้า (กดปุ่มคีย์บอร์ด ←)"
               className={`${toolBtn} flex-1 text-sm font-medium`}
             >
               <ChevronLeft className="w-4 h-4" aria-hidden="true" />
-              <span>Prev Song</span>
+              <span>ก่อนหน้า (←)</span>
             </button>
             <span className={`text-xs font-mono px-1 ${t.textMuted}`} aria-live="polite">
               {selectedSongIdx + 1}/{activeSongs.length}
@@ -716,9 +724,10 @@ export const SetlistManager: React.FC<Props> = ({
               type="button"
               onClick={() => setSelectedSongIdx(Math.min(activeSongs.length - 1, selectedSongIdx + 1))}
               disabled={selectedSongIdx === activeSongs.length - 1}
+              title="เพลงถัดไป (กดปุ่มคีย์บอร์ด →)"
               className={`${toolBtn} flex-1 text-sm font-medium`}
             >
-              <span>Next Song</span>
+              <span>ถัดไป (→)</span>
               <ChevronRight className="w-4 h-4" aria-hidden="true" />
             </button>
           </div>

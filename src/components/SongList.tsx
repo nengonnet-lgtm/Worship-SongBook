@@ -17,9 +17,11 @@ import {
   ChevronDown,
   Check,
   Settings,
-  RotateCcw
+  RotateCcw,
+  MoreHorizontal
 } from 'lucide-react';
 import { ConfirmDialog } from './ConfirmDialog';
+import { RadioGroup, tabIndexFor } from './RadioGroup';
 import { getThemeStyles } from '../utils/themeStyles';
 import type { ThemeStyles } from '../utils/themeStyles';
 import { useDismiss } from '../utils/useDialog';
@@ -81,7 +83,7 @@ const AddToSetlistMenu: React.FC<{
         aria-expanded={open}
         aria-label={`เพิ่ม “${song.title}” เข้าเซ็ตลิสต์`}
         title="Add to setlist (เพิ่มเข้าเซ็ตลิสต์)"
-        className={`w-10 h-10 flex items-center justify-center rounded-lg cursor-pointer transition-colors motion-reduce:transition-none ${
+        className={`w-11 h-11 flex items-center justify-center rounded-xl cursor-pointer transition-colors motion-reduce:transition-none ${
           open ? t.accentSoft + ' border' : t.iconBtn
         } ${t.focus}`}
       >
@@ -138,6 +140,74 @@ const AddToSetlistMenu: React.FC<{
 };
 
 /* ------------------------------------------------------------------ */
+/* "More" menu of a row: holds the delete action so it is never one tap from edit */
+/* ------------------------------------------------------------------ */
+const RowMoreMenu: React.FC<{
+  song: Song;
+  t: ThemeStyles;
+  onDelete: (song: Song) => void;
+}> = ({ song, t, onDelete }) => {
+  const [open, setOpen] = useState(false);
+  const [placement, setPlacement] = useState<'down' | 'up'>('down');
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  useDismiss(wrapRef, open, () => setOpen(false), triggerRef);
+
+  const toggle = () => {
+    if (!open && wrapRef.current) {
+      const rect = wrapRef.current.getBoundingClientRect();
+      const below = window.innerHeight - rect.bottom;
+      setPlacement(below < 120 && rect.top > below ? 'up' : 'down');
+    }
+    setOpen((v) => !v);
+  };
+
+  return (
+    <div ref={wrapRef} className="relative">
+      <button
+        ref={triggerRef}
+        type="button"
+        onClick={toggle}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-label={`ตัวเลือกเพิ่มเติมของ “${song.title}”`}
+        title="More"
+        className={`w-11 h-11 flex items-center justify-center rounded-xl cursor-pointer transition-colors motion-reduce:transition-none ${t.iconBtn} ${t.focus}`}
+      >
+        <MoreHorizontal className="w-5 h-5" aria-hidden="true" />
+      </button>
+
+      {open && (
+        <div
+          role="menu"
+          aria-label="More"
+          className={`absolute right-0 z-30 w-48 rounded-xl border shadow-2xl overflow-hidden ${
+            placement === 'up' ? 'bottom-full mb-1.5' : 'top-full mt-1.5'
+          } ${t.popover}`}
+        >
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              setOpen(false);
+              onDelete(song);
+            }}
+            className={`w-full h-12 px-4 flex items-center gap-3 text-left text-sm font-medium cursor-pointer transition-colors motion-reduce:transition-none ${
+              t.isLight
+                ? 'text-[#B3203E] hover:bg-[#B3203E]/10'
+                : 'text-[#FF6B81] hover:bg-[#D6294A]/15'
+            } ${t.focusInset}`}
+          >
+            <Trash2 className="w-4 h-4" aria-hidden="true" />
+            ลบเพลง
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
+
+/* ------------------------------------------------------------------ */
 /* One song row                                                         */
 /* ------------------------------------------------------------------ */
 const SongRow: React.FC<{
@@ -149,53 +219,36 @@ const SongRow: React.FC<{
   onRequestDelete: (song: Song) => void;
   onAddToSetlist: (setlistId: string, songId: string) => void;
 }> = ({ song, setlists, t, onSelect, onEdit, onRequestDelete, onAddToSetlist }) => (
-  <div className={`group flex items-stretch transition-colors motion-reduce:transition-none ${t.rowHover}`}>
+  <div className={`group flex items-center gap-1 px-3 py-2.5 rounded-2xl transition-colors motion-reduce:transition-none ${t.rowHover}`}>
     {/* Everything on the left opens the song; a real button so Tab / Enter / Space work */}
     <button
       type="button"
       onClick={() => onSelect(song)}
-      className={`flex-1 min-w-0 flex items-center gap-4 pl-4 sm:pl-6 pr-2 py-3 text-left cursor-pointer ${t.focusInset}`}
+      className={`flex-1 min-w-0 flex items-center gap-4 sm:gap-[18px] text-left rounded-xl cursor-pointer ${t.focus}`}
     >
       <span
-        className={`w-12 h-12 shrink-0 rounded-xl border flex items-center justify-center font-mono font-bold text-base ${t.keyBadge}`}
+        className={`w-14 h-14 shrink-0 rounded-2xl border flex items-center justify-center font-keys font-bold text-[22px] ${t.keyBadge}`}
       >
         <span className="sr-only">Key </span>
         {song.key}
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block text-base font-semibold leading-snug truncate">{song.title}</span>
-        <span className={`mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-sm ${t.textMuted}`}>
-          <span className="truncate">{song.artist || 'Unknown Artist'}</span>
-          {song.tempo ? <span className="font-mono text-xs">{song.tempo} BPM</span> : null}
-          {song.capo > 0 ? (
-            <span className={`text-xs font-semibold ${t.accentText}`}>Capo {song.capo}</span>
-          ) : null}
-        </span>
+        <span className="block font-display font-semibold text-xl leading-snug truncate">{song.title}</span>
       </span>
     </button>
 
-    <div className="flex items-center gap-0.5 pr-3 sm:pr-4 shrink-0">
+    <div className="flex items-center shrink-0">
       <AddToSetlistMenu song={song} setlists={setlists} t={t} onAdd={onAddToSetlist} />
       <button
         type="button"
         onClick={() => onEdit(song)}
         aria-label={`แก้ไข “${song.title}”`}
         title="Edit song (แก้ไข)"
-        className={`w-10 h-10 flex items-center justify-center rounded-lg cursor-pointer transition-colors motion-reduce:transition-none ${t.iconBtn} ${t.focus}`}
+        className={`w-11 h-11 flex items-center justify-center rounded-xl cursor-pointer transition-colors motion-reduce:transition-none ${t.iconBtn} ${t.focus}`}
       >
-        <Edit2 className="w-[18px] h-[18px]" aria-hidden="true" />
+        <Edit2 className="w-5 h-5" aria-hidden="true" />
       </button>
-      {/* Delete sits apart from the other actions so it is not hit by accident */}
-      <span aria-hidden="true" className={`w-px h-6 mx-2 border-l ${t.popoverDivider}`} />
-      <button
-        type="button"
-        onClick={() => onRequestDelete(song)}
-        aria-label={`ลบ “${song.title}”`}
-        title="Delete song (ลบ)"
-        className={`w-10 h-10 flex items-center justify-center rounded-lg cursor-pointer transition-colors motion-reduce:transition-none ${t.iconBtnDanger} ${t.focus}`}
-      >
-        <Trash2 className="w-[18px] h-[18px]" aria-hidden="true" />
-      </button>
+      <RowMoreMenu song={song} t={t} onDelete={onRequestDelete} />
     </div>
   </div>
 );
@@ -272,7 +325,11 @@ export const SongList: React.FC<Props> = ({
     setSelectedKey('all');
   };
 
-  const barBtn = `h-10 px-3 rounded-lg border text-sm font-semibold flex items-center gap-2 cursor-pointer transition-colors motion-reduce:transition-none ${t.ghostBtn} ${t.focus}`;
+  const barBtn = `h-11 px-4 rounded-xl border text-[15px] font-display font-medium flex items-center gap-2 cursor-pointer transition-colors motion-reduce:transition-none ${t.ghostBtn} ${t.focus}`;
+  const countLabel =
+    filteredSongs.length === songs.length
+      ? `${songs.length} เพลงในคลัง`
+      : `${filteredSongs.length} จาก ${songs.length} เพลง`;
 
   const exportOptions = [
     {
@@ -315,27 +372,27 @@ export const SongList: React.FC<Props> = ({
         aria-hidden="true"
       />
 
-      {/* Command bar */}
-      <div className={`px-4 py-3 border-b flex items-center justify-between gap-3 shrink-0 ${t.bar}`}>
+      {/* Header */}
+      <div className="px-4 sm:px-8 pt-6 pb-4 flex items-end justify-between gap-3 shrink-0">
         <div className="flex items-center gap-3 min-w-0">
           <button
             type="button"
             onClick={onOpenMenu}
             aria-label="Open menu"
             title="Open Menu (Worship SongBook)"
-            className={`w-11 h-11 shrink-0 flex items-center justify-center rounded-lg cursor-pointer transition-colors motion-reduce:transition-none ${t.iconBtn} ${t.focus}`}
+            className={`md:hidden w-11 h-11 shrink-0 flex items-center justify-center rounded-xl cursor-pointer transition-colors motion-reduce:transition-none ${t.iconBtn} ${t.focus}`}
           >
             <Menu className="w-5 h-5" aria-hidden="true" />
           </button>
           <div className="min-w-0">
-            <h1 className="text-lg font-bold tracking-tight leading-none">Songs</h1>
-            <p className={`mt-1 text-xs font-mono ${t.textMuted}`} aria-live="polite">
-              {filteredSongs.length} of {songs.length} songs
+            <h1 className="font-display font-semibold text-3xl leading-none">Songs</h1>
+            <p className={`mt-1.5 text-base ${t.textMuted}`} aria-live="polite">
+              {countLabel}
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-2.5 shrink-0">
           <button
             type="button"
             onClick={openImport}
@@ -343,7 +400,7 @@ export const SongList: React.FC<Props> = ({
             title="Import songs (JSON, ChordPro, Text)"
             className={barBtn}
           >
-            <Upload className={`w-4 h-4 ${t.accentText}`} aria-hidden="true" />
+            <Upload className="w-4 h-4" aria-hidden="true" />
             <span className="hidden md:inline">Import</span>
           </button>
 
@@ -359,7 +416,7 @@ export const SongList: React.FC<Props> = ({
               title="Export songs (JSON / TypeScript .ts)"
               className={barBtn}
             >
-              <Download className={`w-4 h-4 ${t.accentText}`} aria-hidden="true" />
+              <Download className="w-4 h-4" aria-hidden="true" />
               <span className="hidden sm:inline">Export</span>
               <ChevronDown
                 className={`w-3.5 h-3.5 opacity-70 transition-transform motion-reduce:transition-none ${
@@ -417,10 +474,9 @@ export const SongList: React.FC<Props> = ({
               onClick={onOpenSettings}
               aria-label="Settings"
               title="Settings (การตั้งค่า)"
-              className={barBtn}
+              className={`${barBtn} md:hidden`}
             >
-              <Settings className={`w-4 h-4 ${t.accentText}`} aria-hidden="true" />
-              <span className="hidden lg:inline">Settings</span>
+              <Settings className="w-4 h-4" aria-hidden="true" />
             </button>
           )}
 
@@ -428,20 +484,20 @@ export const SongList: React.FC<Props> = ({
             type="button"
             onClick={onCreateSong}
             aria-label="New song"
-            className={`h-10 px-3.5 sm:px-4 rounded-lg text-sm font-bold flex items-center gap-1.5 cursor-pointer transition-colors motion-reduce:transition-none ${t.accentBtn} ${t.focus}`}
+            className={`h-11 px-4 sm:px-5 rounded-xl text-[15px] font-display font-medium flex items-center gap-1.5 cursor-pointer transition-colors motion-reduce:transition-none ${t.accentBtn} ${t.focus}`}
           >
             <Plus className="w-4 h-4" aria-hidden="true" />
-            <span className="hidden sm:inline">New Song</span>
+            <span className="hidden sm:inline">New song</span>
           </button>
         </div>
       </div>
 
-      {/* Search and filters */}
-      <div className={`p-3 sm:p-4 border-b shrink-0 ${t.subBar}`}>
-        <div className="flex flex-col md:flex-row items-stretch md:items-center gap-2.5">
-          <div className="relative flex-1">
+      {/* Search, sort and key filter */}
+      <div className="px-4 sm:px-8 pb-4 space-y-3 shrink-0">
+        <div className="flex items-stretch gap-2.5">
+          <div className="relative flex-1 min-w-0">
             <Search
-              className={`absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none ${
+              className={`absolute left-4 top-1/2 -translate-y-1/2 w-[18px] h-[18px] pointer-events-none ${
                 searchQuery ? t.accentText : t.textMuted
               }`}
               aria-hidden="true"
@@ -456,12 +512,12 @@ export const SongList: React.FC<Props> = ({
                   setSearchQuery('');
                 }
               }}
-              placeholder="Search title, artist, lyrics (ค้นหาเพลง)"
+              placeholder="ค้นหาชื่อเพลง ศิลปิน หรือเนื้อร้อง"
               aria-label="Search songs by title, artist or lyrics"
               autoComplete="off"
               spellCheck={false}
               enterKeyHint="search"
-              className={`w-full h-11 pl-10 ${searchQuery ? 'pr-12' : 'pr-4'} rounded-lg border text-sm transition-colors motion-reduce:transition-none ${t.field} ${t.focus}`}
+              className={`w-full h-12 pl-11 ${searchQuery ? 'pr-12' : 'pr-4'} rounded-xl border text-base transition-colors motion-reduce:transition-none ${t.field} ${t.focus}`}
             />
             {searchQuery && (
               <button
@@ -469,59 +525,65 @@ export const SongList: React.FC<Props> = ({
                 onClick={() => setSearchQuery('')}
                 aria-label="Clear search"
                 title="Clear search (ล้างคำค้น, Esc)"
-                className={`absolute right-1 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center rounded-md cursor-pointer ${t.iconBtn} ${t.focus}`}
+                className={`absolute right-1.5 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center rounded-lg cursor-pointer ${t.iconBtn} ${t.focus}`}
               >
                 <X className="w-4 h-4" aria-hidden="true" />
               </button>
             )}
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
-            <select
-              value={selectedKey}
-              onChange={(e) => setSelectedKey(e.target.value)}
-              aria-label="Filter by key"
-              title="Filter by musical key"
-              className={`flex-1 md:flex-initial h-11 px-3 rounded-lg border text-sm font-medium cursor-pointer ${t.field} ${t.focus}`}
-            >
-              <option value="all">Key: All</option>
-              {KEYS.map((k) => (
-                <option key={k} value={k}>
-                  Key: {k}
-                </option>
-              ))}
-            </select>
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as SortBy)}
+            aria-label="Sort songs"
+            title="Sort songs"
+            className={`h-12 px-3 rounded-xl border text-[15px] font-display font-medium cursor-pointer ${t.field} ${t.focus}`}
+          >
+            <option value="title">Title A-Z</option>
+            <option value="artist">Artist A-Z</option>
+            <option value="tempo">Tempo (BPM)</option>
+            <option value="recent">Recently added</option>
+          </select>
 
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as SortBy)}
-              aria-label="Sort songs"
-              title="Sort songs"
-              className={`flex-1 md:flex-initial h-11 px-3 rounded-lg border text-sm font-medium cursor-pointer ${t.field} ${t.focus}`}
+          {hasFilters && (
+            <button
+              type="button"
+              onClick={clearFilters}
+              title="Reset all filters and search"
+              aria-label="Reset filters"
+              className={`${barBtn} h-12 shrink-0`}
             >
-              <option value="title">Sort: Title (A-Z)</option>
-              <option value="artist">Sort: Artist (A-Z)</option>
-              <option value="tempo">Sort: Tempo (BPM)</option>
-              <option value="recent">Sort: Recently Added</option>
-            </select>
-
-            {hasFilters && (
-              <button
-                type="button"
-                onClick={clearFilters}
-                title="Reset all filters and search"
-                className={`h-11 px-3 rounded-lg border text-sm font-semibold flex items-center gap-1.5 cursor-pointer shrink-0 transition-colors motion-reduce:transition-none ${t.ghostBtn} ${t.focus}`}
-              >
-                <RotateCcw className="w-4 h-4" aria-hidden="true" />
-                <span className="hidden sm:inline">Reset</span>
-              </button>
-            )}
-          </div>
+              <RotateCcw className="w-4 h-4" aria-hidden="true" />
+              <span className="hidden sm:inline">Reset</span>
+            </button>
+          )}
         </div>
+
+        {/* Key filter: chips scroll sideways, arrow keys move between them */}
+        <RadioGroup label="Filter by key" className="flex gap-2 overflow-x-auto -mx-1 px-1 pb-1">
+          {['all', ...KEYS].map((k, i) => {
+            const selected = selectedKey === k;
+            return (
+              <button
+                key={k}
+                type="button"
+                role="radio"
+                aria-checked={selected}
+                tabIndex={tabIndexFor(selected, i, true)}
+                onClick={() => setSelectedKey(k)}
+                className={`h-11 px-4 shrink-0 rounded-xl border text-sm font-medium cursor-pointer transition-colors motion-reduce:transition-none ${
+                  k === 'all' ? 'font-display text-[15px]' : 'font-keys'
+                } ${selected ? t.chipOn : t.chip} ${t.focus}`}
+              >
+                {k === 'all' ? 'All keys' : k}
+              </button>
+            );
+          })}
+        </RadioGroup>
       </div>
 
       {/* Song rows */}
-      <div className={`flex-1 overflow-y-auto divide-y ${t.divide}`}>
+      <div className={`flex-1 overflow-y-auto px-3 sm:px-5 pb-8 divide-y ${t.divide}`}>
         {filteredSongs.length === 0 ? (
           songs.length === 0 ? (
             <div className="py-20 px-4 text-center flex flex-col items-center justify-center gap-3">
@@ -536,13 +598,13 @@ export const SongList: React.FC<Props> = ({
                 <button
                   type="button"
                   onClick={onCreateSong}
-                  className={`h-11 px-5 rounded-lg text-sm font-bold flex items-center gap-2 cursor-pointer ${t.accentBtn} ${t.focus}`}
+                  className={`h-11 px-5 rounded-xl text-[15px] font-display font-medium flex items-center gap-2 cursor-pointer ${t.accentBtn} ${t.focus}`}
                 >
                   <Plus className="w-4 h-4" aria-hidden="true" />
                   New Song
                 </button>
                 <button type="button" onClick={openImport} className={`${barBtn} h-11 px-5`}>
-                  <Upload className={`w-4 h-4 ${t.accentText}`} aria-hidden="true" />
+                  <Upload className="w-4 h-4" aria-hidden="true" />
                   Import
                 </button>
               </div>

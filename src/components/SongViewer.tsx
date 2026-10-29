@@ -6,6 +6,7 @@ import { formatChordPro } from '../utils/chordProFormatter';
 import { ChordDiagramVisualizer } from './ChordDiagramVisualizer';
 import { QuickActionsSheet } from './QuickActionsSheet';
 import { ChordLine } from './ChordLine';
+import { getThemeStyles } from '../utils/themeStyles';
 import { QuickTransposeButton, normalizeSemitones } from './QuickTransposeButton';
 import {
   ChevronLeft,
@@ -77,6 +78,7 @@ export const SongViewer: React.FC<Props> = ({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const viewerContainerRef = useRef<HTMLDivElement>(null);
   const [showQuickSettings, setShowQuickSettings] = useState(false);
+  const [showExportMenu, setShowExportMenu] = useState(false);
   const [capo, setCapo] = useState<number>(song.capo || 0);
 
   useEffect(() => {
@@ -190,6 +192,88 @@ export const SongViewer: React.FC<Props> = ({
     }
   };
 
+  // Keyboard navigation for scrolling lyrics, switching songs, and auto-scroll
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // 1. Never intercept when user is typing in form elements
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.tagName === 'SELECT' ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+
+      // 2. Do not intercept if modals or popups are open
+      if (showQuickSettings || activeChordDiagram || showExportMenu) {
+        return;
+      }
+
+      // 3. Arrow Down: scroll lyrics down smoothly
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        scrollContainerRef.current?.scrollBy({ top: 110, behavior: 'smooth' });
+        return;
+      }
+
+      // 4. Arrow Up: scroll lyrics up smoothly
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        scrollContainerRef.current?.scrollBy({ top: -110, behavior: 'smooth' });
+        return;
+      }
+
+      // 5. PageDown: scroll down by 80% viewport height
+      if (e.key === 'PageDown') {
+        e.preventDefault();
+        const pageH = scrollContainerRef.current?.clientHeight || 400;
+        scrollContainerRef.current?.scrollBy({ top: pageH * 0.8, behavior: 'smooth' });
+        return;
+      }
+
+      // 6. PageUp: scroll up by 80% viewport height
+      if (e.key === 'PageUp') {
+        e.preventDefault();
+        const pageH = scrollContainerRef.current?.clientHeight || 400;
+        scrollContainerRef.current?.scrollBy({ top: -pageH * 0.8, behavior: 'smooth' });
+        return;
+      }
+
+      // 7. Arrow Right: switch to next song (only in setlist mode)
+      if (e.key === 'ArrowRight') {
+        if (setlistContext && onNextSong) {
+          e.preventDefault();
+          onNextSong();
+        }
+        return;
+      }
+
+      // 8. Arrow Left: switch to previous song (only in setlist mode)
+      if (e.key === 'ArrowLeft') {
+        if (setlistContext && onPrevSong) {
+          e.preventDefault();
+          onPrevSong();
+        }
+        return;
+      }
+
+      // 9. Spacebar: Play / Pause Auto-scroll
+      if (e.key === ' ' || e.code === 'Space') {
+        e.preventDefault();
+        handleToggleAutoScroll();
+        return;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [onNextSong, onPrevSong, showQuickSettings, activeChordDiagram, showExportMenu, isScrolling]);
+
   const toggleFullscreen = () => {
     if (!viewerContainerRef.current) return;
     if (!document.fullscreenElement) {
@@ -200,8 +284,6 @@ export const SongViewer: React.FC<Props> = ({
       setIsFullscreen(false);
     }
   };
-
-  const [showExportMenu, setShowExportMenu] = useState(false);
 
   const handleExportSong = (format: 'chordpro' | 'json' | 'ts' = 'chordpro') => {
     setShowExportMenu(false);
@@ -260,23 +342,11 @@ export const SongViewer: React.FC<Props> = ({
     URL.revokeObjectURL(url);
   };
 
-  const isLight = settings.theme === 'light';
-  const isDarkSlate = settings.theme === 'dark';
-  const isStageBlack = settings.theme === 'stage-black';
-
-  const containerBg = isStageBlack
-    ? 'bg-black text-neutral-100'
-    : isDarkSlate
-    ? 'bg-[#0b1322] text-slate-100'
-    : 'bg-white text-slate-900';
-
-  const headerBg = isStageBlack
-    ? 'bg-neutral-950/90 border-neutral-800'
-    : isDarkSlate
-    ? 'bg-[#111c30]/90 border-slate-700/80'
-    : 'bg-white/95 border-slate-200 text-slate-900 shadow-xs';
-
-  const chordsColor = settings.chordsColor || (isLight ? '#1d4ed8' : '#38bdf8');
+  const t = getThemeStyles(settings.theme);
+  const isLight = t.isLight;
+  const containerBg = t.page;
+  const headerBg = `${t.bar} backdrop-blur-md`;
+  const chordsColor = settings.chordsColor || t.signalHex;
 
   return (
     <div
@@ -289,25 +359,52 @@ export const SongViewer: React.FC<Props> = ({
           {!isEmbedded && onClose && (
             <button
               onClick={onClose}
-              className={`p-1.5 rounded-lg transition-colors cursor-pointer border ${isLight ? 'bg-white hover:bg-blue-50 text-blue-900 border-slate-200' : 'bg-neutral-800 hover:bg-neutral-700 text-neutral-200 border-neutral-700'}`}
+              className={`p-1.5 rounded-lg transition-colors cursor-pointer border ${t.ghostBtn}`}
               title="Close Song"
             >
               <ChevronLeft className="w-5 h-5" />
             </button>
           )}
 
+          {setlistContext && (onPrevSong || onNextSong) && (
+            <div className="flex items-center gap-1 shrink-0">
+              {onPrevSong && (
+                <button
+                  type="button"
+                  onClick={onPrevSong}
+                  className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${t.ghostBtn}`}
+                  title="เพลงก่อนหน้า (กดปุ่มคีย์บอร์ด ← หรือ ArrowLeft)"
+                  aria-label="เพลงก่อนหน้า"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+              )}
+              {onNextSong && (
+                <button
+                  type="button"
+                  onClick={onNextSong}
+                  className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${t.ghostBtn}`}
+                  title="เพลงถัดไป (กดปุ่มคีย์บอร์ด → หรือ ArrowRight)"
+                  aria-label="เพลงถัดไป"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+          )}
+
           <div className="flex flex-col min-w-0">
             <div className="flex items-center gap-2">
-              <h1 className={`font-bold text-sm sm:text-base md:text-lg truncate tracking-tight ${isLight ? 'text-slate-950' : ''}`}>
+              <h1 className="font-display font-semibold text-base md:text-xl truncate tracking-tight">
                 {song.title}
               </h1>
               {setlistContext && (
-                <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold shrink-0 border ${isLight ? 'bg-sky-50 text-blue-800 border-sky-300' : 'bg-amber-400/20 text-amber-300 border-amber-400/30'}`}>
+                <span className={`px-2 py-0.5 rounded-full text-xs font-keys font-bold shrink-0 border ${t.accentSoft}`}>
                   {setlistContext.currentIdx + 1}/{setlistContext.totalSongs}
                 </span>
               )}
             </div>
-            <div className={`flex items-center gap-2 text-xs truncate ${isLight ? 'text-slate-500' : 'opacity-75'}`}>
+            <div className={`flex items-center gap-2 text-xs truncate ${t.textMuted}`}>
               <span>{song.artist || 'Unknown Artist'}</span>
               {song.tempo && (
                 <>
@@ -337,20 +434,19 @@ export const SongViewer: React.FC<Props> = ({
 
           <button
             onClick={handleToggleAutoScroll}
-            className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer shadow-xs border ${isScrolling ? 'bg-amber-400 text-neutral-950 border-amber-300' : 'bg-neutral-800 hover:bg-neutral-700 text-neutral-200 border-neutral-700'}`}
+            title={isScrolling ? 'หยุดเลื่อน (กด Spacebar บนคีย์บอร์ด)' : 'เลื่อนอัตโนมัติ (กด Spacebar บนคีย์บอร์ด)'}
+            className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer shadow-xs border ${isScrolling ? `${t.accentBtn} border-transparent` : t.ghostBtn}`}
           >
             {isScrolling ? <Pause className="w-3.5 h-3.5 fill-current" /> : <Play className="w-3.5 h-3.5 fill-current" />}
-            <span className="hidden sm:inline">{isScrolling ? 'Pause' : 'Scroll'}</span>
+            <span className="hidden sm:inline">
+              {isScrolling ? 'Pause' : countdown !== null ? `${countdown}s` : 'Scroll'}
+            </span>
           </button>
 
           <button
             onClick={() => setShowQuickSettings(!showQuickSettings)}
             className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
-              showQuickSettings
-                ? 'bg-amber-400 text-neutral-950 border-amber-300'
-                : isLight
-                ? 'bg-white hover:bg-blue-50 text-slate-700 border-slate-200 shadow-xs'
-                : 'bg-neutral-800 hover:bg-neutral-700 text-neutral-200 border-neutral-700'
+              showQuickSettings ? `${t.accentBtn} border-transparent` : t.ghostBtn
             }`}
             title="แถบควบคุมด่วน (Quick Actions)"
           >
@@ -360,7 +456,7 @@ export const SongViewer: React.FC<Props> = ({
           {onEditSong && (
             <button
               onClick={() => onEditSong(song)}
-              className="p-1.5 rounded-lg border bg-neutral-800 hover:bg-neutral-700 text-neutral-200 border-neutral-700 cursor-pointer"
+              className={`p-1.5 rounded-lg border cursor-pointer ${t.ghostBtn}`}
             >
               <Edit2 className="w-4 h-4" />
             </button>
@@ -368,7 +464,7 @@ export const SongViewer: React.FC<Props> = ({
 
           <button
             onClick={toggleFullscreen}
-            className="p-1.5 rounded-lg border bg-neutral-800 hover:bg-neutral-700 text-neutral-200 border-neutral-700 cursor-pointer"
+            className={`p-1.5 rounded-lg border cursor-pointer ${t.ghostBtn}`}
           >
             {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
           </button>
@@ -377,16 +473,16 @@ export const SongViewer: React.FC<Props> = ({
 
       {/* TOP CHORD BADGES BAR */}
       {settings.showChords !== false && parsed.allChords.length > 0 && (
-        <div className={`px-4 sm:px-6 py-2 border-b flex items-center gap-1.5 overflow-x-auto text-xs shrink-0 ${isLight ? 'bg-sky-50/60 border-slate-200' : 'bg-neutral-900/60 border-neutral-800'}`}>
-          <span className="text-[11px] font-semibold uppercase tracking-wider shrink-0 mr-1 flex items-center gap-1 text-neutral-400">
-            <Music className="w-3 h-3 text-amber-400" />
+        <div className={`px-4 sm:px-6 py-2 border-b flex items-center gap-1.5 overflow-x-auto text-xs shrink-0 ${t.subBar}`}>
+          <span className={`text-xs font-display font-medium shrink-0 mr-1 flex items-center gap-1 ${t.textMuted}`}>
+            <Music className={`w-3 h-3 ${t.accentText}`} />
             Chords:
           </span>
           {parsed.allChords.map((chord) => (
             <button
               key={chord}
               onClick={() => setActiveChordDiagram(activeChordDiagram === chord ? null : chord)}
-              className={`px-2 py-0.5 rounded-md font-mono font-bold border transition-colors cursor-pointer ${activeChordDiagram === chord ? 'bg-amber-400 text-neutral-950 border-amber-300' : 'bg-neutral-800 text-neutral-200 border-neutral-700'}`}
+              className={`px-2.5 py-1 rounded-lg font-keys font-bold border transition-colors cursor-pointer ${activeChordDiagram === chord ? `${t.accentBtn} border-transparent` : t.ghostBtn}`}
             >
               {chord}
             </button>
@@ -410,7 +506,7 @@ export const SongViewer: React.FC<Props> = ({
           {parsed.sections.map((section, sIdx) => (
             <div key={sIdx} className="break-inside-avoid space-y-3 mb-6">
               {section.title && (
-                <span className={`text-xs font-bold font-mono uppercase tracking-wider block ${isLight ? 'text-amber-600' : 'text-amber-400'}`}>
+                <span className={`inline-block px-3.5 py-1 rounded-full text-sm font-display font-medium ${t.numberOff}`}>
                   {section.title}
                 </span>
               )}
@@ -419,7 +515,7 @@ export const SongViewer: React.FC<Props> = ({
                 if (line.type === 'empty') return <div key={lIdx} className="h-3" />;
                 if (line.type === 'comment') {
                   return (
-                    <div key={lIdx} className={`text-xs italic pl-2.5 py-1 border-l-2 ${isLight ? 'text-slate-500 border-slate-300' : 'text-neutral-400 border-neutral-700'}`}>
+                    <div key={lIdx} className={`text-sm italic py-1 ${t.textMuted}`}>
                       {line.comment}
                     </div>
                   );
@@ -437,7 +533,7 @@ export const SongViewer: React.FC<Props> = ({
                       items={items}
                       showChords={settings.showChords !== false}
                       chordColor={chordsColor}
-                      lyricClassName={isLight ? 'text-slate-800' : 'text-neutral-200'}
+                      lyricClassName={t.textStrong}
                       onChordClick={(chord) => setActiveChordDiagram(chord)}
                     />
                   </div>
@@ -480,7 +576,7 @@ export const SongViewer: React.FC<Props> = ({
           <div onClick={(e) => e.stopPropagation()} className="relative">
             <button
               onClick={() => setActiveChordDiagram(null)}
-              className="absolute -top-3 -right-3 z-10 w-7 h-7 rounded-full bg-neutral-800 border border-neutral-700 text-neutral-300 hover:text-white flex items-center justify-center shadow-lg cursor-pointer"
+              className={`absolute -top-3 -right-3 z-10 w-7 h-7 rounded-full border flex items-center justify-center shadow-lg cursor-pointer ${t.ghostBtn}`}
             >
               <X className="w-4 h-4" />
             </button>

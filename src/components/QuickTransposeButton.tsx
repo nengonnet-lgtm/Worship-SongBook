@@ -113,26 +113,26 @@ export const QuickTransposeButton: React.FC<QuickTransposeButtonProps> = ({
 
   const stepButton = `flex items-center justify-center w-9 h-8 rounded-md transition-colors cursor-pointer active:scale-95 ${
     isLight
-      ? 'text-blue-800 hover:bg-blue-100'
-      : 'text-neutral-300 hover:bg-neutral-700 hover:text-white'
+      ? 'text-[#1A1815] hover:bg-[#E5DCC9]'
+      : 'text-[#F3EEE3] hover:bg-[#262320]'
   }`;
 
   const centreTone = isTransposed
     ? isLight
-      ? 'bg-blue-100 text-blue-800 hover:bg-blue-200'
-      : 'bg-amber-400/15 text-amber-300 hover:bg-amber-400/25'
+      ? 'bg-[#D97706]/10 text-[#B45309] hover:bg-[#D97706]/20'
+      : 'bg-[#F59E0B]/15 text-[#FBBF24] hover:bg-[#F59E0B]/25'
     : isLight
-    ? 'text-blue-700 hover:bg-blue-100'
-    : 'text-amber-400 hover:bg-neutral-700';
+    ? 'text-[#D97706] hover:bg-[#E5DCC9]'
+    : 'text-[#F59E0B] hover:bg-[#262320]';
 
   const cellClass = (isCurrent: boolean, isOriginal: boolean) => {
     if (isCurrent) {
-      return isLight ? 'bg-blue-600 text-white' : 'bg-amber-400 text-neutral-950';
+      return isLight ? 'bg-[#D97706] text-white font-bold' : 'bg-[#F59E0B] text-[#0F0E0C] font-bold';
     }
     const base = isLight
-      ? 'bg-slate-100 hover:bg-blue-100 text-slate-800'
-      : 'bg-neutral-800 hover:bg-neutral-700 text-neutral-200';
-    const ring = isOriginal ? (isLight ? ' ring-1 ring-blue-400' : ' ring-1 ring-amber-400/60') : '';
+      ? 'bg-[#EFE8DA] hover:bg-[#E5DCC9] text-[#1A1815]'
+      : 'bg-[#262320] hover:bg-[#2C2924] text-[#F3EEE3]';
+    const ring = isOriginal ? (isLight ? ' ring-1 ring-[#D97706]' : ' ring-1 ring-[#F59E0B]/70') : '';
     return base + ring;
   };
 
@@ -141,7 +141,7 @@ export const QuickTransposeButton: React.FC<QuickTransposeButtonProps> = ({
       role="group"
       aria-label="Quick transpose"
       className={`flex items-center rounded-lg border p-0.5 shadow-xs ${
-        isLight ? 'border-blue-200 bg-blue-50/70' : 'border-neutral-700/80 bg-neutral-900/60'
+        isLight ? 'border-[#CFC5B0] bg-[#EFE8DA]' : 'border-[#3A362F] bg-[#1A1815]'
       }`}
     >
       <button
@@ -181,7 +181,7 @@ export const QuickTransposeButton: React.FC<QuickTransposeButtonProps> = ({
             role="listbox"
             aria-label="Choose key"
             className={`absolute top-full left-1/2 mt-2 z-30 w-60 rounded-xl border p-2 shadow-2xl ${
-              isLight ? 'bg-white border-slate-200 text-slate-700' : 'bg-neutral-900 border-neutral-700 text-neutral-300'
+              isLight ? 'bg-[#FBF8F1] border-[#CFC5B0] text-[#1A1815]' : 'bg-[#1A1815] border-[#3A362F] text-[#F3EEE3]'
             }`}
             style={{ transform: `translateX(calc(-50% + ${shiftX}px))` }}
           >

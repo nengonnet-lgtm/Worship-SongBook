@@ -2,7 +2,7 @@ import React, { useId, useRef } from 'react';
 import { X, Settings, Columns, Eye, EyeOff, Moon, Sun, Monitor, Check } from 'lucide-react';
 import { AppSettings, InstrumentType, ChordNotation } from '../types/song';
 import { RadioGroup, tabIndexFor } from './RadioGroup';
-import { getThemeStyles } from '../utils/themeStyles';
+import { getThemeStyles, chordColorForTheme } from '../utils/themeStyles';
 import type { ThemeStyles } from '../utils/themeStyles';
 import { useDialogBehavior } from '../utils/useDialog';
 
@@ -14,12 +14,13 @@ interface Props {
 }
 
 const CHORD_COLORS = [
+  { name: 'ส้มเหลืองสว่าง (Signal)', hex: '#F59E0B' },
+  { name: 'Warm Amber', hex: '#D97706' },
+  { name: 'Bright Yellow', hex: '#fbbf24' },
   { name: 'Sky Blue', hex: '#38bdf8' },
-  { name: 'Amber', hex: '#fbbf24' },
   { name: 'Emerald', hex: '#34d399' },
   { name: 'Rose', hex: '#fb7185' },
   { name: 'Purple', hex: '#c084fc' },
-  { name: 'Yellow', hex: '#facc15' },
   { name: 'Royal Blue', hex: '#1d4ed8' },
   { name: 'White', hex: '#ffffff' }
 ];
@@ -40,24 +41,24 @@ const NOTATIONS: { value: ChordNotation; label: string }[] = [
 const THEME_TILES = [
   {
     value: 'stage-black',
-    label: 'OLED',
+    label: 'Ink',
     Icon: Moon,
-    on: 'bg-black border-amber-400 text-amber-400',
-    off: 'bg-black border-neutral-700 text-neutral-400 hover:border-neutral-500'
+    on: 'bg-[#0F0E0C] border-[#F59E0B] text-[#F3EEE3]',
+    off: 'bg-[#0F0E0C] border-[#3A362F] text-[#A8A092] hover:border-[#6B655A]'
   },
   {
     value: 'dark',
-    label: 'Slate',
+    label: 'Graphite',
     Icon: Monitor,
-    on: 'bg-[#1e293b] border-sky-400 text-sky-400',
-    off: 'bg-[#1e293b] border-slate-600 text-slate-400 hover:border-slate-400'
+    on: 'bg-[#101418] border-[#F59E0B] text-[#E9EDF2]',
+    off: 'bg-[#101418] border-[#38424D] text-[#9BA5B2] hover:border-[#5B6877]'
   },
   {
     value: 'light',
-    label: 'Light',
+    label: 'Paper',
     Icon: Sun,
-    on: 'bg-white border-blue-600 text-blue-700',
-    off: 'bg-white border-slate-300 text-slate-500 hover:border-slate-400'
+    on: 'bg-[#F6F1E7] border-[#D97706] text-[#1A1815]',
+    off: 'bg-[#F6F1E7] border-[#CFC5B0] text-[#6B6558] hover:border-[#A89F8B]'
   }
 ] as const;
 
@@ -76,10 +77,10 @@ const Section: React.FC<{
 }> = ({ id, title, value, t, flush, children }) => (
   <section aria-labelledby={id} className={flush ? '' : 'py-4 first:pt-0 last:pb-0'}>
     <div className="flex items-baseline justify-between gap-3 mb-2.5">
-      <h3 id={id} className="text-sm font-semibold">
+      <h3 id={id} className="font-display text-[15px] font-medium">
         {title}
       </h3>
-      {value && <span className={`text-sm font-mono shrink-0 ${t.accentText}`}>{value}</span>}
+      {value && <span className={`text-sm font-keys shrink-0 ${t.accentText}`}>{value}</span>}
     </div>
     {children}
   </section>
@@ -149,19 +150,10 @@ const SettingsDialog: React.FC<Props> = ({ onClose, settings, onUpdateSettings }
   const stepBtn = `w-10 h-10 shrink-0 rounded-lg border text-sm font-bold flex items-center justify-center cursor-pointer transition-colors motion-reduce:transition-none ${t.ghostBtn} ${t.focus}`;
 
   const applyTheme = (value: (typeof THEME_TILES)[number]['value']) => {
-    if (value === 'stage-black') {
-      onUpdateSettings({
-        theme: 'stage-black',
-        chordsColor: settings.chordsColor === '#1d4ed8' ? '#fbbf24' : settings.chordsColor
-      });
-    } else if (value === 'dark') {
-      onUpdateSettings({
-        theme: 'dark',
-        chordsColor: settings.chordsColor === '#1d4ed8' ? '#38bdf8' : settings.chordsColor
-      });
-    } else {
-      onUpdateSettings({ theme: 'light', chordsColor: '#1d4ed8' });
-    }
+    onUpdateSettings({
+      theme: value,
+      chordsColor: chordColorForTheme(value, settings.chordsColor)
+    });
   };
 
   return (
@@ -184,7 +176,7 @@ const SettingsDialog: React.FC<Props> = ({ onClose, settings, onUpdateSettings }
               <Settings className="w-5 h-5" aria-hidden="true" />
             </div>
             <div className="min-w-0">
-              <h2 id={`${uid}-title`} className="font-bold text-base leading-tight truncate">
+              <h2 id={`${uid}-title`} className="font-display font-semibold text-lg leading-tight truncate">
                 ตั้งค่าระบบ (Settings)
               </h2>
               <p className={`text-sm leading-tight truncate ${t.textMuted}`}>
@@ -246,7 +238,7 @@ const SettingsDialog: React.FC<Props> = ({ onClose, settings, onUpdateSettings }
                     className={`w-10 h-10 rounded-full border border-black/25 flex items-center justify-center cursor-pointer transition-transform motion-reduce:transition-none ${
                       selected
                         ? `scale-105 ring-2 ring-offset-2 ${
-                            t.isLight ? 'ring-slate-700 ring-offset-white' : 'ring-white ring-offset-neutral-900'
+                            t.isLight ? 'ring-[#1A1815] ring-offset-[#FBF8F1]' : 'ring-[#F3EEE3] ring-offset-[#1A1815]'
                           }`
                         : 'hover:scale-105'
                     } ${t.focus}`}

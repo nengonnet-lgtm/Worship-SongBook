@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Song, Setlist, AppSettings } from './types/song';
 import { SAMPLE_SONGS, INITIAL_SETLISTS } from './data/sampleSongs';
 import { SidebarDrawer } from './components/SidebarDrawer';
+import { NavRail } from './components/NavRail';
 import { SongList } from './components/SongList';
 import { SongViewer } from './components/SongViewer';
 import { SongEditorModal } from './components/SongEditorModal';
@@ -11,6 +12,7 @@ import { SettingsModal } from './components/SettingsModal';
 import { MetronomeBar } from './components/MetronomeBar';
 import { OfflineIndicator } from './components/OfflineIndicator';
 import { X } from 'lucide-react';
+import { getThemeStyles, SIGNAL_ON_DARK } from './utils/themeStyles';
 
 const STORAGE_KEYS = {
   SONGS: 'songbook_pro_songs',
@@ -22,7 +24,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   theme: 'stage-black',
   fontSize: 16,
   columns: 1,
-  chordsColor: '#38bdf8', // Sky 400
+  chordsColor: SIGNAL_ON_DARK, // bright yellow-orange signal (#F59E0B)
   instrument: 'guitar',
   showChords: true,
   chordNotation: 'standard',
@@ -71,7 +73,14 @@ export default function App() {
   const [settings, setSettings] = useState<AppSettings>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.SETTINGS);
-      if (saved) return { ...DEFAULT_SETTINGS, ...JSON.parse(saved) };
+      if (saved) {
+        const parsed = { ...DEFAULT_SETTINGS, ...JSON.parse(saved) };
+        // Migrate old vermilion red-orange values to bright yellow-orange / warm amber
+        if (parsed.chordsColor === '#FF5B3A' || parsed.chordsColor === '#C42E14' || parsed.chordsColor === '#E8421F') {
+          parsed.chordsColor = parsed.theme === 'light' ? '#D97706' : '#F59E0B';
+        }
+        return parsed;
+      }
     } catch (e) {
       console.warn('Failed to load settings from localStorage', e);
     }
@@ -486,15 +495,10 @@ export default function App() {
 
   const activeSetlist = setlists.find((sl) => sl.id === activeSetlistId) || null;
 
-  const appBg =
-    settings.theme === 'stage-black'
-      ? 'bg-black text-neutral-100'
-      : settings.theme === 'light'
-      ? 'bg-white text-slate-900'
-      : 'bg-[#0b1322] text-slate-100';
+  const appBg = getThemeStyles(settings.theme).page;
 
   return (
-    <div className={`flex flex-col h-screen w-screen overflow-hidden select-none ${appBg}`}>
+    <div className={`flex flex-col h-dvh w-full overflow-hidden select-none ${appBg}`}>
       <SidebarDrawer
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
@@ -513,7 +517,19 @@ export default function App() {
         onUpdateSettings={updateSettings}
       />
 
-      <main className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex min-h-0 overflow-hidden">
+      {!selectedSong && (
+        <NavRail
+          activeTab={activeTab}
+          onSelectTab={setActiveTab}
+          onOpenChords={() => setShowChordLibrary(true)}
+          onOpenMetronome={() => setShowFloatingMetronome(true)}
+          onOpenSettings={() => setShowSettingsModal(true)}
+          isMetronomeOpen={showFloatingMetronome}
+          theme={settings.theme}
+        />
+      )}
+      <main className="flex-1 flex overflow-hidden min-w-0">
         {selectedSong ? (
           <SongViewer
             key={`${selectedSong.id}-${activeSetlistContext?.setlist?.id || 'standalone'}`}
@@ -547,8 +563,8 @@ export default function App() {
                 });
               }
             }}
-            onNextSong={handleNextSetlistSong}
-            onPrevSong={handlePrevSetlistSong}
+            onNextSong={activeSetlistContext ? handleNextSetlistSong : undefined}
+            onPrevSong={activeSetlistContext ? handlePrevSetlistSong : undefined}
             setlistContext={
               activeSetlistContext
                 ? {
@@ -625,6 +641,7 @@ export default function App() {
           />
         )}
       </main>
+      </div>
 
       {showFloatingMetronome && (
         <div className="fixed top-16 right-3 sm:right-6 z-50 w-64 sm:w-72 max-w-[calc(100vw-1.5rem)] shadow-2xl">

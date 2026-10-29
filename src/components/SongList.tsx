@@ -224,16 +224,16 @@ const SongRow: React.FC<{
     <button
       type="button"
       onClick={() => onSelect(song)}
-      className={`flex-1 min-w-0 flex items-center gap-4 sm:gap-[18px] text-left rounded-xl cursor-pointer ${t.focus}`}
+      className={`flex-1 min-w-0 flex items-center gap-3 sm:gap-3.5 text-left rounded-xl cursor-pointer ${t.focus}`}
     >
       <span
-        className={`w-14 h-14 shrink-0 rounded-2xl border flex items-center justify-center font-keys font-bold text-[22px] ${t.keyBadge}`}
+        className={`min-w-[34px] h-8 px-2 shrink-0 rounded-[10px] border flex items-center justify-center font-keys font-bold text-sm ${t.keyBadge}`}
       >
         <span className="sr-only">Key </span>
         {song.key}
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block font-display font-semibold text-xl leading-snug truncate">{song.title}</span>
+        <span className="block font-display font-semibold text-lg leading-snug truncate">{song.title}</span>
       </span>
     </button>
 

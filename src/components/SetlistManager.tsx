@@ -262,7 +262,7 @@ const AddSongsDialog: React.FC<{
                       </span>
                     )}
                     <span
-                      className={`shrink-0 w-10 h-10 rounded-xl border flex items-center justify-center font-keys font-bold text-base ${t.keyBadge}`}
+                      className={`shrink-0 min-w-[34px] h-8 px-2 rounded-[10px] border flex items-center justify-center font-keys font-bold text-sm ${t.keyBadge}`}
                     >
                       {song.key}
                     </span>
@@ -651,14 +651,14 @@ export const SetlistManager: React.FC<Props> = ({
                                 ? `Setlist Key: ${effectiveKey} (Original: ${song.key})`
                                 : `Key: ${song.key}`
                             }
-                            className={`w-12 h-12 rounded-xl border flex items-center justify-center font-keys font-bold text-lg ${
+                            className={`min-w-[34px] h-8 px-2 rounded-[10px] border flex items-center justify-center font-keys font-bold text-sm ${
                               isTransposed ? t.accentSoft : t.keyBadge
                             }`}
                           >
                             {effectiveKey}
                           </span>
                           {isTransposed && (
-                            <span className={`text-xs font-keys ${t.textMuted}`}>orig {song.key}</span>
+                            <span className={`text-[10px] font-keys leading-none ${t.textMuted}`}>orig {song.key}</span>
                           )}
                         </span>
                       </button>

@@ -441,7 +441,7 @@ export const SetlistManager: React.FC<Props> = ({
               >
                 <span className="min-w-0 flex flex-col">
                   <span className="font-display font-semibold text-[22px] sm:text-[24px] leading-tight truncate">
-                    {activeSetlist ? activeSetlist.title : 'เลือกเซ็ตลิสต์'}
+                    {activeSetlist ? activeSetlist.title : 'Select Setlist'}
                   </span>
                   <span className={`text-[13px] ${t.textMuted}`}>
                     {activeSongs.length} เพลง, ~{totalDurationMinutes} นาที

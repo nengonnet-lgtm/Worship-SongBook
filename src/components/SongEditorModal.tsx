@@ -45,7 +45,7 @@ export const SongEditorModal: React.FC<Props> = ({
   onClose
 }) => {
   const [showMoreMeta, setShowMoreMeta] = useState(false);
-  const [title, setTitle] = useState(song ? song.title : 'New Song');
+  const [title, setTitle] = useState(song ? song.title : '');
   const [artist, setArtist] = useState(song ? song.artist : '');
   const [key, setKey] = useState(song ? song.key : 'C');
   const [tempo, setTempo] = useState(song ? song.tempo : 120);
@@ -345,7 +345,7 @@ export const SongEditorModal: React.FC<Props> = ({
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="Song Title..."
-                className="w-full px-2.5 py-1 rounded-lg bg-neutral-800 border border-neutral-700 text-neutral-100 focus:outline-none focus:border-[#F59E0B] font-bold"
+                className="w-full px-2.5 py-1 rounded-lg bg-neutral-800 border border-neutral-700 text-neutral-100 focus:outline-none focus:border-[#F59E0B]"
               />
             </div>
 

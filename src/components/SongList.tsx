@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react';
-import { Song, Setlist } from '../types/song';
+import React, { useMemo, useRef, useState } from 'react';
+import { Song, Setlist, AppSettings } from '../types/song';
 import { KEYS } from '../utils/chordUtils';
 import {
   Search,
@@ -19,8 +19,10 @@ import {
   Settings,
   RotateCcw
 } from 'lucide-react';
-
-import { AppSettings } from '../types/song';
+import { ConfirmDialog } from './ConfirmDialog';
+import { getThemeStyles } from '../utils/themeStyles';
+import type { ThemeStyles } from '../utils/themeStyles';
+import { useDismiss } from '../utils/useDialog';
 
 interface Props {
   songs: Song[];
@@ -37,6 +39,170 @@ interface Props {
   onAddSongToSetlist: (setlistId: string, songId: string) => void;
 }
 
+type SortBy = 'title' | 'artist' | 'tempo' | 'recent';
+
+// Thai-aware ordering (leading vowels such as เ แ โ ไ do not decide the position)
+const collator = new Intl.Collator(['th', 'en']);
+
+const IMPORT_ACCEPT = '.json,.cho,.chordpro,.pro,.txt,.chopro';
+
+/* ------------------------------------------------------------------ */
+/* Add-to-setlist menu (one per row, closes on outside tap / Escape)    */
+/* ------------------------------------------------------------------ */
+const AddToSetlistMenu: React.FC<{
+  song: Song;
+  setlists: Setlist[];
+  t: ThemeStyles;
+  onAdd: (setlistId: string, songId: string) => void;
+}> = ({ song, setlists, t, onAdd }) => {
+  const [open, setOpen] = useState(false);
+  const [placement, setPlacement] = useState<'down' | 'up'>('down');
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  useDismiss(wrapRef, open, () => setOpen(false), triggerRef);
+
+  const toggle = () => {
+    if (!open && wrapRef.current) {
+      // Open upwards when there is not enough room below (last rows of the list)
+      const rect = wrapRef.current.getBoundingClientRect();
+      const below = window.innerHeight - rect.bottom;
+      setPlacement(below < 300 && rect.top > below ? 'up' : 'down');
+    }
+    setOpen((v) => !v);
+  };
+
+  return (
+    <div ref={wrapRef} className="relative">
+      <button
+        ref={triggerRef}
+        type="button"
+        onClick={toggle}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-label={`เพิ่ม “${song.title}” เข้าเซ็ตลิสต์`}
+        title="Add to setlist (เพิ่มเข้าเซ็ตลิสต์)"
+        className={`w-10 h-10 flex items-center justify-center rounded-lg cursor-pointer transition-colors motion-reduce:transition-none ${
+          open ? t.accentSoft + ' border' : t.iconBtn
+        } ${t.focus}`}
+      >
+        <ListPlus className="w-5 h-5" aria-hidden="true" />
+      </button>
+
+      {open && (
+        <div
+          role="menu"
+          aria-label="เพิ่มเข้าเซ็ตลิสต์"
+          className={`absolute right-0 z-30 w-64 max-w-[calc(100vw-1.5rem)] rounded-xl border shadow-2xl overflow-hidden ${
+            placement === 'up' ? 'bottom-full mb-1.5' : 'top-full mt-1.5'
+          } ${t.popover}`}
+        >
+          <div className={`px-3.5 py-2.5 text-sm font-semibold border-b ${t.popoverDivider}`}>
+            เพิ่มเข้าเซ็ตลิสต์
+          </div>
+          <div className="max-h-60 overflow-y-auto py-1">
+            {setlists.length === 0 ? (
+              <p className={`px-3.5 py-3 text-sm ${t.textMuted}`}>
+                No setlists created yet (ยังไม่มีเซ็ตลิสต์)
+              </p>
+            ) : (
+              setlists.map((sl) => {
+                const already = sl.songIds.includes(song.id);
+                return (
+                  <button
+                    key={sl.id}
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      onAdd(sl.id, song.id);
+                      setOpen(false);
+                      triggerRef.current?.focus();
+                    }}
+                    className={`w-full min-h-11 px-3.5 py-2 flex items-center justify-between gap-3 text-left text-sm cursor-pointer transition-colors motion-reduce:transition-none ${t.popoverItem} ${t.focusInset}`}
+                  >
+                    <span className="truncate">{sl.title}</span>
+                    {already && (
+                      <span className={`flex items-center gap-1 text-xs shrink-0 ${t.accentText}`}>
+                        <Check className="w-3.5 h-3.5" aria-hidden="true" />
+                        อยู่ในเซ็ตแล้ว
+                      </span>
+                    )}
+                  </button>
+                );
+              })
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+/* ------------------------------------------------------------------ */
+/* One song row                                                         */
+/* ------------------------------------------------------------------ */
+const SongRow: React.FC<{
+  song: Song;
+  setlists: Setlist[];
+  t: ThemeStyles;
+  onSelect: (song: Song) => void;
+  onEdit: (song: Song) => void;
+  onRequestDelete: (song: Song) => void;
+  onAddToSetlist: (setlistId: string, songId: string) => void;
+}> = ({ song, setlists, t, onSelect, onEdit, onRequestDelete, onAddToSetlist }) => (
+  <div className={`group flex items-stretch transition-colors motion-reduce:transition-none ${t.rowHover}`}>
+    {/* Everything on the left opens the song; a real button so Tab / Enter / Space work */}
+    <button
+      type="button"
+      onClick={() => onSelect(song)}
+      className={`flex-1 min-w-0 flex items-center gap-4 pl-4 sm:pl-6 pr-2 py-3 text-left cursor-pointer ${t.focusInset}`}
+    >
+      <span
+        className={`w-12 h-12 shrink-0 rounded-xl border flex items-center justify-center font-mono font-bold text-base ${t.keyBadge}`}
+      >
+        <span className="sr-only">Key </span>
+        {song.key}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-base font-semibold leading-snug truncate">{song.title}</span>
+        <span className={`mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-sm ${t.textMuted}`}>
+          <span className="truncate">{song.artist || 'Unknown Artist'}</span>
+          {song.tempo ? <span className="font-mono text-xs">{song.tempo} BPM</span> : null}
+          {song.capo > 0 ? (
+            <span className={`text-xs font-semibold ${t.accentText}`}>Capo {song.capo}</span>
+          ) : null}
+        </span>
+      </span>
+    </button>
+
+    <div className="flex items-center gap-0.5 pr-3 sm:pr-4 shrink-0">
+      <AddToSetlistMenu song={song} setlists={setlists} t={t} onAdd={onAddToSetlist} />
+      <button
+        type="button"
+        onClick={() => onEdit(song)}
+        aria-label={`แก้ไข “${song.title}”`}
+        title="Edit song (แก้ไข)"
+        className={`w-10 h-10 flex items-center justify-center rounded-lg cursor-pointer transition-colors motion-reduce:transition-none ${t.iconBtn} ${t.focus}`}
+      >
+        <Edit2 className="w-[18px] h-[18px]" aria-hidden="true" />
+      </button>
+      {/* Delete sits apart from the other actions so it is not hit by accident */}
+      <span aria-hidden="true" className={`w-px h-6 mx-2 border-l ${t.popoverDivider}`} />
+      <button
+        type="button"
+        onClick={() => onRequestDelete(song)}
+        aria-label={`ลบ “${song.title}”`}
+        title="Delete song (ลบ)"
+        className={`w-10 h-10 flex items-center justify-center rounded-lg cursor-pointer transition-colors motion-reduce:transition-none ${t.iconBtnDanger} ${t.focus}`}
+      >
+        <Trash2 className="w-[18px] h-[18px]" aria-hidden="true" />
+      </button>
+    </div>
+  </div>
+);
+
+/* ------------------------------------------------------------------ */
+/* Song list screen                                                     */
+/* ------------------------------------------------------------------ */
 export const SongList: React.FC<Props> = ({
   songs,
   setlists,
@@ -53,32 +219,36 @@ export const SongList: React.FC<Props> = ({
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedKey, setSelectedKey] = useState<string>('all');
-  const [sortBy, setSortBy] = useState<'title' | 'artist' | 'tempo' | 'recent'>('title');
-  const [showFabMenu, setShowFabMenu] = useState(false);
+  const [sortBy, setSortBy] = useState<SortBy>('title');
   const [showExportMenu, setShowExportMenu] = useState(false);
-  const [openSetlistDropdownId, setOpenSetlistDropdownId] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<Song | null>(null);
 
-  // Filter and sort songs
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const exportWrapRef = useRef<HTMLDivElement>(null);
+  const exportTriggerRef = useRef<HTMLButtonElement>(null);
+  useDismiss(exportWrapRef, showExportMenu, () => setShowExportMenu(false), exportTriggerRef);
+
+  const t = getThemeStyles(settings?.theme);
+
   const filteredSongs = useMemo(() => {
+    const query = searchQuery.toLowerCase().trim();
     return songs
       .filter((song) => {
-        const query = searchQuery.toLowerCase().trim();
         const matchesSearch =
           !query ||
           song.title.toLowerCase().includes(query) ||
-          song.artist.toLowerCase().includes(query) ||
-          song.chordProContent.toLowerCase().includes(query) ||
-          (song.tags && song.tags.some((t) => t.toLowerCase().includes(query))) ||
+          (song.artist || '').toLowerCase().includes(query) ||
+          (song.chordProContent || '').toLowerCase().includes(query) ||
+          (song.tags && song.tags.some((tag) => tag.toLowerCase().includes(query))) ||
           (song.notes && song.notes.toLowerCase().includes(query)) ||
-          song.key.toLowerCase() === query;
+          (song.key || '').toLowerCase() === query;
 
         const matchesKey = selectedKey === 'all' || song.key === selectedKey;
-
         return matchesSearch && matchesKey;
       })
       .sort((a, b) => {
-        if (sortBy === 'title') return a.title.localeCompare(b.title);
-        if (sortBy === 'artist') return a.artist.localeCompare(b.artist);
+        if (sortBy === 'title') return collator.compare(a.title, b.title);
+        if (sortBy === 'artist') return collator.compare(a.artist || '', b.artist || '');
         if (sortBy === 'tempo') return (b.tempo || 0) - (a.tempo || 0);
         if (sortBy === 'recent') return b.lastModified - a.lastModified;
         return 0;
@@ -91,372 +261,258 @@ export const SongList: React.FC<Props> = ({
       for (let i = 0; i < files.length; i++) {
         onImportSong(files[i]);
       }
-      setShowFabMenu(false);
       e.target.value = '';
     }
   };
 
-  const isDarkSlate = settings?.theme === 'dark';
-  const isLight = settings?.theme === 'light';
-  const isStageBlack = settings?.theme === 'stage-black';
+  const openImport = () => fileInputRef.current?.click();
+  const hasFilters = Boolean(searchQuery) || selectedKey !== 'all';
+  const clearFilters = () => {
+    setSearchQuery('');
+    setSelectedKey('all');
+  };
 
-  const containerBg = isStageBlack
-    ? 'bg-black text-neutral-100'
-    : isLight
-    ? 'bg-white text-slate-900'
-    : 'bg-[#0b1322] text-slate-100';
+  const barBtn = `h-10 px-3 rounded-lg border text-sm font-semibold flex items-center gap-2 cursor-pointer transition-colors motion-reduce:transition-none ${t.ghostBtn} ${t.focus}`;
 
-  const commandBarBg = isStageBlack
-    ? 'bg-black border-neutral-900 text-neutral-100'
-    : isLight
-    ? 'bg-white border-blue-100 text-slate-900 shadow-xs'
-    : 'bg-[#182338] border-slate-700/80 text-slate-100';
-
-  const searchInputStyle = isLight
-    ? 'bg-sky-50/70 border-blue-200 text-slate-900 placeholder-slate-400 focus:bg-white focus:border-blue-600'
-    : isDarkSlate
-    ? 'bg-slate-900/90 border-slate-700 text-slate-100 placeholder-slate-400 focus:border-sky-400'
-    : 'bg-neutral-800/80 border-neutral-700/80 text-neutral-100 placeholder-neutral-500 focus:border-amber-400';
-
-  const newSongBtnStyle = isLight
-    ? 'bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-xs'
-    : isDarkSlate
-    ? 'bg-sky-500 hover:bg-sky-400 text-slate-950 font-black'
-    : 'bg-amber-400 hover:bg-amber-300 text-neutral-950 font-bold';
-
-  const filterBarBg = isLight
-    ? 'border-blue-100 bg-sky-50/60'
-    : isDarkSlate
-    ? 'border-slate-800 bg-[#0f172a]'
-    : 'border-neutral-800 bg-neutral-900/40';
-
-  const selectStyle = isLight
-    ? 'bg-white border-blue-200 text-slate-800 focus:border-blue-600'
-    : isDarkSlate
-    ? 'bg-slate-800 border-slate-700 text-slate-200 focus:border-sky-400'
-    : 'bg-neutral-800 border-neutral-700 text-neutral-200 focus:border-amber-400';
-
-  const divideStyle = isLight
-    ? 'divide-blue-100'
-    : isDarkSlate
-    ? 'divide-slate-800'
-    : 'divide-neutral-800/80';
+  const exportOptions = [
+    {
+      format: 'json-songs' as const,
+      title: 'JSON (.json)',
+      badge: 'แนะนำ',
+      desc: 'Array เพลงเพียว ๆ สำหรับ Backup หรือ Import เข้าเครื่องอื่น',
+      Icon: FileText,
+      tint: 'bg-emerald-500/10 text-emerald-500'
+    },
+    {
+      format: 'ts' as const,
+      title: 'TypeScript (sampleSongs.ts)',
+      badge: '',
+      desc: 'โค้ด TypeScript พร้อม import/export นำไปวางในโปรเจกต์ได้ทันที',
+      Icon: FileCode,
+      tint: 'bg-sky-500/10 text-sky-500'
+    },
+    {
+      format: 'json-full' as const,
+      title: 'Full Backup (.json)',
+      badge: '',
+      desc: 'สำรองทั้งเพลงทั้งหมดและรายการ Setlists ทั้งหมด',
+      Icon: Download,
+      tint: 'bg-amber-500/10 text-amber-500'
+    }
+  ];
 
   return (
-    <div className={`flex-1 flex flex-col h-full overflow-hidden relative ${containerBg}`}>
-      {/* SongBook Pro Command Bar */}
-      <div className={`px-4 py-3 border-b flex items-center justify-between gap-3 shrink-0 ${commandBarBg}`}>
-        <div className="flex items-center gap-3">
+    <div className={`flex-1 flex flex-col h-full overflow-hidden relative ${t.page}`}>
+      {/* Hidden file input shared by the Import button and the empty state */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept={IMPORT_ACCEPT}
+        multiple
+        onChange={handleFileUpload}
+        className="hidden"
+        tabIndex={-1}
+        aria-hidden="true"
+      />
+
+      {/* Command bar */}
+      <div className={`px-4 py-3 border-b flex items-center justify-between gap-3 shrink-0 ${t.bar}`}>
+        <div className="flex items-center gap-3 min-w-0">
           <button
+            type="button"
             onClick={onOpenMenu}
-            className={`p-2 rounded-lg transition-colors cursor-pointer ${
-              isLight ? 'hover:bg-blue-50 text-blue-900 border border-blue-200/60' : isDarkSlate ? 'hover:bg-slate-700 text-slate-300 hover:text-white' : 'hover:bg-neutral-800 text-neutral-300 hover:text-white'
-            }`}
+            aria-label="Open menu"
             title="Open Menu (Worship SongBook)"
+            className={`w-11 h-11 shrink-0 flex items-center justify-center rounded-lg cursor-pointer transition-colors motion-reduce:transition-none ${t.iconBtn} ${t.focus}`}
           >
-            <Menu className="w-5 h-5" />
+            <Menu className="w-5 h-5" aria-hidden="true" />
           </button>
-          <div>
-            <h1 className={`text-base sm:text-lg font-bold tracking-tight leading-none ${isLight ? 'text-slate-900' : ''}`}>
-              Songs
-            </h1>
-            <span className={`text-[11px] font-mono ${isLight ? 'text-blue-700 font-medium' : isDarkSlate ? 'text-slate-400' : 'text-neutral-400'}`}>
+          <div className="min-w-0">
+            <h1 className="text-lg font-bold tracking-tight leading-none">Songs</h1>
+            <p className={`mt-1 text-xs font-mono ${t.textMuted}`} aria-live="polite">
               {filteredSongs.length} of {songs.length} songs
-            </span>
+            </p>
           </div>
         </div>
 
-        {/* Top Command Bar Action Buttons */}
         <div className="flex items-center gap-2 shrink-0">
-          {/* Import Button */}
-          <label
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold cursor-pointer border transition-colors ${
-              isLight
-                ? 'bg-white hover:bg-blue-50 text-blue-900 border-blue-200 shadow-xs'
-                : isDarkSlate
-                ? 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700'
-                : 'bg-neutral-800 hover:bg-neutral-700 text-neutral-300 border-neutral-700'
-            }`}
+          <button
+            type="button"
+            onClick={openImport}
+            aria-label="Import songs"
             title="Import songs (JSON, ChordPro, Text)"
+            className={barBtn}
           >
-            <Upload className="w-3.5 h-3.5 text-amber-400" />
+            <Upload className={`w-4 h-4 ${t.accentText}`} aria-hidden="true" />
             <span className="hidden md:inline">Import</span>
-            <input
-              type="file"
-              accept=".json,.cho,.chordpro,.pro,.txt,.chopro"
-              multiple
-              onChange={handleFileUpload}
-              className="hidden"
-            />
-          </label>
+          </button>
 
-          {/* Export Dropdown Menu (Mounted in Top Command Bar) */}
-          <div className="relative">
+          {/* Export menu */}
+          <div ref={exportWrapRef} className="relative">
             <button
-              onClick={() => setShowExportMenu(!showExportMenu)}
-              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold cursor-pointer border transition-all ${
-                showExportMenu
-                  ? isLight
-                    ? 'bg-blue-100 text-blue-950 border-blue-400 shadow-xs'
-                    : 'bg-neutral-700 text-white border-amber-400'
-                  : isLight
-                  ? 'bg-white hover:bg-blue-50 text-blue-900 border-blue-200 shadow-xs'
-                  : isDarkSlate
-                  ? 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700'
-                  : 'bg-neutral-800 hover:bg-neutral-700 text-neutral-300 border-neutral-700'
-              }`}
+              ref={exportTriggerRef}
+              type="button"
+              onClick={() => setShowExportMenu((v) => !v)}
+              aria-haspopup="menu"
+              aria-expanded={showExportMenu}
+              aria-label="Export songs"
               title="Export songs (JSON / TypeScript .ts)"
+              className={barBtn}
             >
-              <Download className="w-3.5 h-3.5 text-amber-400" />
-              <span>Export</span>
-              <ChevronDown className={`w-3 h-3 opacity-70 transition-transform ${showExportMenu ? 'rotate-180' : ''}`} />
+              <Download className={`w-4 h-4 ${t.accentText}`} aria-hidden="true" />
+              <span className="hidden sm:inline">Export</span>
+              <ChevronDown
+                className={`w-3.5 h-3.5 opacity-70 transition-transform motion-reduce:transition-none ${
+                  showExportMenu ? 'rotate-180' : ''
+                }`}
+                aria-hidden="true"
+              />
             </button>
 
             {showExportMenu && (
-              <>
-                <div
-                  className="fixed inset-0 z-40"
-                  onClick={() => setShowExportMenu(false)}
-                />
-                <div
-                  className={`absolute right-0 top-full mt-2 w-72 max-w-[calc(100vw-2rem)] rounded-2xl shadow-2xl py-2 z-50 border text-xs ${
-                    isLight
-                      ? 'bg-white border-blue-200 text-slate-800 shadow-blue-900/20'
-                      : 'bg-neutral-900 border-neutral-700 text-neutral-100 shadow-black/90'
-                  }`}
-                >
-                  <div
-                    className={`px-3.5 py-1.5 text-[10px] font-bold uppercase tracking-wider border-b ${
-                      isLight
-                        ? 'text-blue-700 border-blue-100 bg-sky-50/70'
-                        : 'text-neutral-400 border-neutral-800 bg-neutral-950/60'
-                    }`}
-                  >
-                    Export Format (เลือกรูปแบบส่งออก)
-                  </div>
-
-                  {/* Option 1: JSON */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowExportMenu(false);
-                      onExportLibrary('json-songs');
-                    }}
-                    className={`w-full text-left px-3.5 py-2.5 flex items-start gap-3 transition-colors cursor-pointer ${
-                      isLight ? 'hover:bg-blue-50 text-slate-800' : 'hover:bg-neutral-800 text-neutral-200'
-                    }`}
-                  >
-                    <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center shrink-0 mt-0.5">
-                      <FileText className="w-4 h-4" />
-                    </div>
-                    <div className="flex-1">
-                      <div className="font-bold flex items-center gap-1.5">
-                        <span>JSON (.json)</span>
-                        <span className="text-[10px] px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 font-mono font-normal">
-                          แนะนำ
-                        </span>
-                      </div>
-                      <p className={`text-[11px] leading-tight mt-0.5 ${isLight ? 'text-slate-500' : 'text-neutral-400'}`}>
-                        Array เพลงเพียว ๆ สำหรับ Backup หรือ Import เข้าเครื่องอื่น
-                      </p>
-                    </div>
-                  </button>
-
-                  {/* Option 2: TypeScript */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowExportMenu(false);
-                      onExportLibrary('ts');
-                    }}
-                    className={`w-full text-left px-3.5 py-2.5 flex items-start gap-3 transition-colors cursor-pointer border-t ${
-                      isLight
-                        ? 'border-blue-50 hover:bg-blue-50 text-slate-800'
-                        : 'border-neutral-800 hover:bg-neutral-800 text-neutral-200'
-                    }`}
-                  >
-                    <div className="w-8 h-8 rounded-lg bg-sky-500/10 text-sky-400 flex items-center justify-center shrink-0 mt-0.5">
-                      <FileCode className="w-4 h-4" />
-                    </div>
-                    <div className="flex-1">
-                      <div className="font-bold flex items-center gap-1.5">
-                        <span>TypeScript (sampleSongs.ts)</span>
-                      </div>
-                      <p className={`text-[11px] leading-tight mt-0.5 ${isLight ? 'text-slate-500' : 'text-neutral-400'}`}>
-                        โค้ด TypeScript พร้อม import/export นำไปวางในโปรเจกต์ได้ทันที
-                      </p>
-                    </div>
-                  </button>
-
-                  {/* Option 3: Full Backup */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowExportMenu(false);
-                      onExportLibrary('json-full');
-                    }}
-                    className={`w-full text-left px-3.5 py-2.5 flex items-start gap-3 transition-colors cursor-pointer border-t ${
-                      isLight
-                        ? 'border-blue-50 hover:bg-blue-50 text-slate-800'
-                        : 'border-neutral-800 hover:bg-neutral-800 text-neutral-200'
-                    }`}
-                  >
-                    <div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-400 flex items-center justify-center shrink-0 mt-0.5">
-                      <Download className="w-4 h-4" />
-                    </div>
-                    <div className="flex-1">
-                      <div className="font-bold flex items-center gap-1.5">
-                        <span>Full Backup (.json)</span>
-                      </div>
-                      <p className={`text-[11px] leading-tight mt-0.5 ${isLight ? 'text-slate-500' : 'text-neutral-400'}`}>
-                        สำรองทั้งเพลงทั้งหมดและรายการ Setlists ทั้งหมด
-                      </p>
-                    </div>
-                  </button>
+              <div
+                role="menu"
+                aria-label="Export format"
+                className={`absolute right-0 top-full mt-2 w-80 max-w-[calc(100vw-1.5rem)] rounded-2xl border shadow-2xl z-50 overflow-hidden ${t.popover}`}
+              >
+                <div className={`px-4 py-3 text-sm font-semibold border-b ${t.popoverDivider}`}>
+                  Export format (เลือกรูปแบบส่งออก)
                 </div>
-              </>
+                {exportOptions.map((opt, i) => (
+                  <button
+                    key={opt.format}
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setShowExportMenu(false);
+                      onExportLibrary(opt.format);
+                    }}
+                    className={`w-full text-left px-4 py-3 flex items-start gap-3 cursor-pointer transition-colors motion-reduce:transition-none ${
+                      i > 0 ? `border-t ${t.popoverDivider}` : ''
+                    } ${t.popoverItem} ${t.focusInset}`}
+                  >
+                    <span className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${opt.tint}`}>
+                      <opt.Icon className="w-4 h-4" aria-hidden="true" />
+                    </span>
+                    <span className="flex-1 min-w-0">
+                      <span className="flex items-center gap-2 text-sm font-semibold">
+                        {opt.title}
+                        {opt.badge && (
+                          <span className="text-xs px-1.5 rounded bg-emerald-500/15 text-emerald-500 font-normal">
+                            {opt.badge}
+                          </span>
+                        )}
+                      </span>
+                      <span className={`block mt-0.5 text-xs leading-snug ${t.textMuted}`}>{opt.desc}</span>
+                    </span>
+                  </button>
+                ))}
+              </div>
             )}
           </div>
 
-          {/* Settings Button */}
           {onOpenSettings && (
             <button
+              type="button"
               onClick={onOpenSettings}
-              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold cursor-pointer border transition-colors ${
-                isLight
-                  ? 'bg-white hover:bg-blue-50 text-blue-900 border-blue-200 shadow-xs'
-                  : isDarkSlate
-                  ? 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700'
-                  : 'bg-neutral-800 hover:bg-neutral-700 text-neutral-300 border-neutral-700'
-              }`}
+              aria-label="Settings"
               title="Settings (การตั้งค่า)"
+              className={barBtn}
             >
-              <Settings className="w-3.5 h-3.5 text-amber-400" />
+              <Settings className={`w-4 h-4 ${t.accentText}`} aria-hidden="true" />
               <span className="hidden lg:inline">Settings</span>
             </button>
           )}
 
-          {/* Action Button: New Song */}
           <button
+            type="button"
             onClick={onCreateSong}
-            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs transition-colors cursor-pointer shadow-sm ${newSongBtnStyle}`}
+            aria-label="New song"
+            className={`h-10 px-3.5 sm:px-4 rounded-lg text-sm font-bold flex items-center gap-1.5 cursor-pointer transition-colors motion-reduce:transition-none ${t.accentBtn} ${t.focus}`}
           >
-            <Plus className="w-4 h-4" />
-            <span className="hidden sm:inline font-bold">New Song</span>
+            <Plus className="w-4 h-4" aria-hidden="true" />
+            <span className="hidden sm:inline">New Song</span>
           </button>
         </div>
       </div>
 
-      {/* Dedicated Search & Filter Controls Station */}
-      <div className={`p-3 sm:p-4 border-b flex flex-col gap-3 shrink-0 ${filterBarBg}`}>
-        {/* Primary Search Input Row with Key & Sort dropdowns */}
+      {/* Search and filters */}
+      <div className={`p-3 sm:p-4 border-b shrink-0 ${t.subBar}`}>
         <div className="flex flex-col md:flex-row items-stretch md:items-center gap-2.5">
-          {/* Main Search Bar */}
           <div className="relative flex-1">
             <Search
-              className={`absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none transition-colors ${
-                searchQuery
-                  ? isLight
-                    ? 'text-blue-600'
-                    : isDarkSlate
-                    ? 'text-sky-400'
-                    : 'text-amber-400'
-                  : isLight
-                  ? 'text-slate-400'
-                  : 'text-neutral-500'
+              className={`absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none ${
+                searchQuery ? t.accentText : t.textMuted
               }`}
+              aria-hidden="true"
             />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === 'Escape') setSearchQuery('');
+                if (e.key === 'Escape' && searchQuery) {
+                  e.stopPropagation();
+                  setSearchQuery('');
+                }
               }}
-              placeholder="Search title, artist, or lyrics... (ค้นหาชื่อเพลง, ศิลปิน, หรือเนื้อร้อง)"
-              className={`w-full h-11 pl-10 pr-24 rounded-xl border text-xs sm:text-sm focus:outline-none transition-all shadow-xs ${searchInputStyle}`}
+              placeholder="Search title, artist, lyrics (ค้นหาเพลง)"
+              aria-label="Search songs by title, artist or lyrics"
+              autoComplete="off"
+              spellCheck={false}
+              enterKeyHint="search"
+              className={`w-full h-11 pl-10 ${searchQuery ? 'pr-12' : 'pr-4'} rounded-lg border text-sm transition-colors motion-reduce:transition-none ${t.field} ${t.focus}`}
             />
-            {/* Clear Button & Results Counter Badge */}
-            <div className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
-              {searchQuery && (
-                <button
-                  type="button"
-                  onClick={() => setSearchQuery('')}
-                  className={`p-1 rounded-md opacity-70 hover:opacity-100 transition-opacity cursor-pointer ${
-                    isLight ? 'text-slate-600 hover:bg-slate-200/60' : 'text-neutral-300 hover:bg-neutral-700'
-                  }`}
-                  title="Clear search (ล้างคำค้น - Esc)"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              )}
-              <span
-                className={`text-[11px] font-mono font-semibold px-2 py-0.5 rounded-md ${
-                  isLight
-                    ? 'bg-blue-100 text-blue-800'
-                    : isDarkSlate
-                    ? 'bg-slate-800 text-sky-300'
-                    : 'bg-neutral-800 text-amber-400'
-                }`}
-                title="Number of matching songs"
-              >
-                {filteredSongs.length} songs
-              </span>
-            </div>
-          </div>
-
-          {/* Quick Selects: Key & Sort */}
-          <div className="flex items-center gap-2 shrink-0">
-            {/* Key Filter Dropdown */}
-            <div className="relative flex-1 md:flex-initial">
-              <select
-                value={selectedKey}
-                onChange={(e) => setSelectedKey(e.target.value)}
-                className={`w-full md:w-auto h-11 px-3 rounded-xl border text-xs sm:text-sm font-medium focus:outline-none cursor-pointer transition-colors shadow-xs ${selectStyle}`}
-                title="Filter by musical key"
-              >
-                <option value="all">Key: All</option>
-                {KEYS.map((k) => (
-                  <option key={k} value={k}>
-                    Key: {k}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Sort Dropdown */}
-            <div className="relative flex-1 md:flex-initial">
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as any)}
-                className={`w-full md:w-auto h-11 px-3 rounded-xl border text-xs sm:text-sm font-medium focus:outline-none cursor-pointer transition-colors shadow-xs ${selectStyle}`}
-                title="Sort songs"
-              >
-                <option value="title">Sort: Title (A-Z)</option>
-                <option value="artist">Sort: Artist (A-Z)</option>
-                <option value="tempo">Sort: Tempo (BPM)</option>
-                <option value="recent">Sort: Recently Added</option>
-              </select>
-            </div>
-
-            {/* Reset Active Filters Button */}
-            {(searchQuery || selectedKey !== 'all') && (
+            {searchQuery && (
               <button
                 type="button"
-                onClick={() => {
-                  setSearchQuery('');
-                  setSelectedKey('all');
-                }}
-                className={`h-11 px-3 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shrink-0 shadow-xs ${
-                  isLight
-                    ? 'bg-rose-50 hover:bg-rose-100 text-rose-700 border-rose-200'
-                    : isDarkSlate
-                    ? 'bg-rose-950/40 hover:bg-rose-900/50 text-rose-400 border-rose-800/60'
-                    : 'bg-rose-950/40 hover:bg-rose-900/50 text-rose-400 border-rose-900/60'
-                }`}
-                title="Reset all filters and search"
+                onClick={() => setSearchQuery('')}
+                aria-label="Clear search"
+                title="Clear search (ล้างคำค้น, Esc)"
+                className={`absolute right-1 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center rounded-md cursor-pointer ${t.iconBtn} ${t.focus}`}
               >
-                <RotateCcw className="w-3.5 h-3.5" />
+                <X className="w-4 h-4" aria-hidden="true" />
+              </button>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <select
+              value={selectedKey}
+              onChange={(e) => setSelectedKey(e.target.value)}
+              aria-label="Filter by key"
+              title="Filter by musical key"
+              className={`flex-1 md:flex-initial h-11 px-3 rounded-lg border text-sm font-medium cursor-pointer ${t.field} ${t.focus}`}
+            >
+              <option value="all">Key: All</option>
+              {KEYS.map((k) => (
+                <option key={k} value={k}>
+                  Key: {k}
+                </option>
+              ))}
+            </select>
+
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as SortBy)}
+              aria-label="Sort songs"
+              title="Sort songs"
+              className={`flex-1 md:flex-initial h-11 px-3 rounded-lg border text-sm font-medium cursor-pointer ${t.field} ${t.focus}`}
+            >
+              <option value="title">Sort: Title (A-Z)</option>
+              <option value="artist">Sort: Artist (A-Z)</option>
+              <option value="tempo">Sort: Tempo (BPM)</option>
+              <option value="recent">Sort: Recently Added</option>
+            </select>
+
+            {hasFilters && (
+              <button
+                type="button"
+                onClick={clearFilters}
+                title="Reset all filters and search"
+                className={`h-11 px-3 rounded-lg border text-sm font-semibold flex items-center gap-1.5 cursor-pointer shrink-0 transition-colors motion-reduce:transition-none ${t.ghostBtn} ${t.focus}`}
+              >
+                <RotateCcw className="w-4 h-4" aria-hidden="true" />
                 <span className="hidden sm:inline">Reset</span>
               </button>
             )}
@@ -464,187 +520,78 @@ export const SongList: React.FC<Props> = ({
         </div>
       </div>
 
-      {/* Main Song List Table / Rows */}
-      <div className={`flex-1 overflow-y-auto divide-y ${divideStyle}`}>
+      {/* Song rows */}
+      <div className={`flex-1 overflow-y-auto divide-y ${t.divide}`}>
         {filteredSongs.length === 0 ? (
-          <div className="py-20 px-4 text-center flex flex-col items-center justify-center gap-3">
-            <div
-              className={`w-16 h-16 rounded-2xl flex items-center justify-center ${
-                isLight ? 'bg-sky-50 text-blue-400' : isDarkSlate ? 'bg-slate-800/80 text-sky-400' : 'bg-neutral-900 text-amber-400'
-              }`}
-            >
-              <Music className="w-8 h-8" />
-            </div>
-            <div>
-              <h3 className={`text-base font-bold ${isLight ? 'text-slate-800' : 'text-neutral-100'}`}>
-                No songs found (ไม่พบเพลงที่ค้นหา)
-              </h3>
-              <p className={`text-xs mt-1 max-w-sm ${isLight ? 'text-slate-500' : 'text-neutral-400'}`}>
-                {searchQuery && <span>Search: "{searchQuery}" </span>}
-                {selectedKey !== 'all' && <span>• Key: {selectedKey}</span>}
+          songs.length === 0 ? (
+            <div className="py-20 px-4 text-center flex flex-col items-center justify-center gap-3">
+              <div className={`w-14 h-14 rounded-2xl border flex items-center justify-center ${t.keyBadge}`}>
+                <Music className="w-7 h-7" aria-hidden="true" />
+              </div>
+              <h2 className="text-base font-semibold">ยังไม่มีเพลงในคลัง</h2>
+              <p className={`text-sm max-w-xs ${t.textMuted}`}>
+                เริ่มจากสร้างเพลงใหม่ หรือนำเข้าไฟล์ JSON / ChordPro / Text
               </p>
+              <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
+                <button
+                  type="button"
+                  onClick={onCreateSong}
+                  className={`h-11 px-5 rounded-lg text-sm font-bold flex items-center gap-2 cursor-pointer ${t.accentBtn} ${t.focus}`}
+                >
+                  <Plus className="w-4 h-4" aria-hidden="true" />
+                  New Song
+                </button>
+                <button type="button" onClick={openImport} className={`${barBtn} h-11 px-5`}>
+                  <Upload className={`w-4 h-4 ${t.accentText}`} aria-hidden="true" />
+                  Import
+                </button>
+              </div>
             </div>
-            <button
-              type="button"
-              onClick={() => {
-                setSearchQuery('');
-                setSelectedKey('all');
-              }}
-              className={`mt-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 shadow-xs ${
-                isLight
-                  ? 'bg-blue-600 hover:bg-blue-700 text-white'
-                  : isDarkSlate
-                  ? 'bg-sky-500 hover:bg-sky-400 text-slate-950'
-                  : 'bg-amber-400 hover:bg-amber-300 text-neutral-950'
-              }`}
-            >
-              <RotateCcw className="w-3.5 h-3.5" />
-              <span>Clear filters & search (ล้างตัวกรองทั้งหมด)</span>
-            </button>
-          </div>
+          ) : (
+            <div className="py-20 px-4 text-center flex flex-col items-center justify-center gap-3">
+              <div className={`w-14 h-14 rounded-2xl border flex items-center justify-center ${t.keyBadge}`}>
+                <Search className="w-7 h-7" aria-hidden="true" />
+              </div>
+              <h2 className="text-base font-semibold">No songs found (ไม่พบเพลงที่ค้นหา)</h2>
+              <button
+                type="button"
+                onClick={clearFilters}
+                className={`mt-1 h-11 px-5 rounded-lg border text-sm font-semibold cursor-pointer ${t.ghostBtn} ${t.focus}`}
+              >
+                Clear filters &amp; search (ล้างตัวกรองทั้งหมด)
+              </button>
+            </div>
+          )
         ) : (
           filteredSongs.map((song) => (
-            <div
+            <SongRow
               key={song.id}
-              onClick={() => onSelectSong(song)}
-              className={`group flex items-center justify-between px-4 sm:px-6 py-3.5 transition-colors cursor-pointer select-none ${
-                isLight
-                  ? 'hover:bg-blue-50/60'
-                  : isDarkSlate
-                  ? 'hover:bg-[#182338]/80'
-                  : 'hover:bg-neutral-900/80'
-              }`}
-            >
-              {/* Left: Title, Artist, & Tags */}
-              <div className="flex flex-col min-w-0 pr-4">
-                <span className={`font-bold text-sm sm:text-base transition-colors truncate ${
-                  isLight
-                    ? 'text-slate-900 group-hover:text-blue-700'
-                    : isDarkSlate
-                    ? 'text-slate-100 group-hover:text-sky-400'
-                    : 'text-neutral-100 group-hover:text-amber-400'
-                }`}>
-                  {song.title}
-                </span>
-                <div className={`flex items-center gap-2 text-xs mt-0.5 truncate ${
-                  isLight ? 'text-slate-500' : isDarkSlate ? 'text-slate-400' : 'text-neutral-400'
-                }`}>
-                  <span>{song.artist || 'Unknown Artist'}</span>
-                  {song.tempo && (
-                    <>
-                      <span>·</span>
-                      <span className="font-mono text-[11px] opacity-75">{song.tempo} BPM</span>
-                    </>
-                  )}
-                  {song.capo > 0 && (
-                    <>
-                      <span>·</span>
-                      <span className={`text-[11px] ${isLight ? 'text-blue-600 font-semibold' : isDarkSlate ? 'text-sky-400' : 'text-amber-300/80'}`}>Capo {song.capo}</span>
-                    </>
-                  )}
-                </div>
-              </div>
-
-              {/* Right: Key Box & Actions (Authentic SongBook Pro key box) */}
-              <div className="flex items-center gap-3 shrink-0" onClick={(e) => e.stopPropagation()}>
-                {/* Key Badge */}
-                <div className={`w-11 h-9 rounded-lg border flex flex-col items-center justify-center font-mono font-bold text-sm shadow-xs transition-colors ${
-                  isLight
-                    ? 'bg-sky-50 text-blue-700 border-blue-200 group-hover:border-blue-400 group-hover:bg-blue-100/60'
-                    : isDarkSlate
-                    ? 'bg-slate-900 text-sky-400 border-slate-700 group-hover:border-sky-400'
-                    : 'bg-neutral-900 text-amber-400 border-neutral-700/80 group-hover:border-amber-400/50'
-                }`}>
-                  <span>{song.key}</span>
-                </div>
-
-                {/* Setlist Add dropdown */}
-                <div className="relative">
-                  <button
-                    onClick={() =>
-                      setOpenSetlistDropdownId(
-                        openSetlistDropdownId === song.id ? null : song.id
-                      )
-                    }
-                    className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
-                      isLight
-                        ? 'text-slate-400 hover:text-blue-700 hover:bg-blue-50'
-                        : 'text-neutral-400 hover:text-white hover:bg-neutral-800'
-                    }`}
-                    title="Add to a Setlist"
-                  >
-                    <ListPlus className="w-4 h-4" />
-                  </button>
-
-                  {openSetlistDropdownId === song.id && (
-                    <div className={`absolute right-0 top-full mt-1 w-48 rounded-xl shadow-2xl py-1 z-30 border ${
-                      isLight
-                        ? 'bg-white border-blue-200 text-slate-800 shadow-blue-900/10'
-                        : 'bg-neutral-900 border-neutral-700'
-                    }`}>
-                      <div className={`px-3 py-1 text-[10px] uppercase tracking-wider font-semibold border-b ${
-                        isLight
-                          ? 'text-blue-700 border-blue-100 bg-sky-50/60'
-                          : 'text-neutral-400 border-neutral-800'
-                      }`}>
-                        Add to Setlist
-                      </div>
-                      {setlists.length === 0 ? (
-                        <div className={`px-3 py-2 text-xs ${isLight ? 'text-slate-500' : 'text-neutral-400'}`}>
-                          No setlists created yet
-                        </div>
-                      ) : (
-                        setlists.map((sl) => (
-                          <button
-                            key={sl.id}
-                            onClick={() => {
-                              onAddSongToSetlist(sl.id, song.id);
-                              setOpenSetlistDropdownId(null);
-                            }}
-                            className={`w-full text-left px-3 py-1.5 text-xs transition-colors truncate cursor-pointer ${
-                              isLight
-                                ? 'text-slate-700 hover:bg-blue-50 hover:text-blue-800'
-                                : 'text-neutral-200 hover:bg-neutral-800'
-                            }`}
-                          >
-                            + {sl.title}
-                          </button>
-                        ))
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                {/* Edit Button */}
-                <button
-                  onClick={() => onEditSong(song)}
-                  className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
-                    isLight
-                      ? 'text-slate-400 hover:text-blue-700 hover:bg-blue-50'
-                      : 'text-neutral-400 hover:text-white hover:bg-neutral-800'
-                  }`}
-                  title="Edit song"
-                >
-                  <Edit2 className="w-4 h-4" />
-                </button>
-
-                {/* Delete Button */}
-                <button
-                  onClick={() => onDeleteSong(song.id)}
-                  className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
-                    isLight
-                      ? 'text-slate-400 hover:text-rose-600 hover:bg-rose-50'
-                      : 'text-neutral-500 hover:text-red-400 hover:bg-red-500/10'
-                  }`}
-                  title="Delete song"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
+              song={song}
+              setlists={setlists}
+              t={t}
+              onSelect={onSelectSong}
+              onEdit={onEditSong}
+              onRequestDelete={setPendingDelete}
+              onAddToSetlist={onAddSongToSetlist}
+            />
           ))
         )}
       </div>
+
+      {pendingDelete && (
+        <ConfirmDialog
+          tone="danger"
+          theme={settings?.theme}
+          title={`ลบเพลง “${pendingDelete.title}” ?`}
+          message="เพลงนี้จะถูกลบออกจากคลังเพลง"
+          confirmLabel="ลบเพลง"
+          onCancel={() => setPendingDelete(null)}
+          onConfirm={() => {
+            onDeleteSong(pendingDelete.id);
+            setPendingDelete(null);
+          }}
+        />
+      )}
     </div>
   );
 };

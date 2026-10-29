@@ -1,19 +1,16 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import {
   Music,
   ListMusic,
-  Tag,
   BookOpen,
   Settings as SettingsIcon,
   X,
-  FileText,
-  Volume2,
-  Moon,
-  Sun,
-  ShieldAlert
+  Volume2
 } from 'lucide-react';
-import { AppSettings, AppTheme, InstrumentType } from '../types/song';
+import { AppSettings, InstrumentType } from '../types/song';
 import { PWAInstallButton } from './PWAInstallButton';
+import { RadioGroup, tabIndexFor } from './RadioGroup';
+import { useDialogBehavior } from '../utils/useDialog';
 
 interface Props {
   isOpen: boolean;
@@ -29,8 +26,26 @@ interface Props {
   onUpdateSettings: (settings: Partial<AppSettings>) => void;
 }
 
-export const SidebarDrawer: React.FC<Props> = ({
-  isOpen,
+const focusRing =
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300';
+
+// Main navigation rows. The amber outline on idle rows is kept as designed.
+const navBase = `w-full flex items-center justify-between px-3.5 h-12 rounded-xl border transition-colors motion-reduce:transition-none cursor-pointer ${focusRing}`;
+const navActive = 'bg-amber-400 text-neutral-950 font-bold shadow-sm border-amber-400';
+const navIdle = 'text-neutral-300 hover:bg-sky-700 hover:text-white border-amber-400/80';
+
+const toolRow = `w-full flex items-center gap-3 px-3.5 h-11 rounded-xl text-neutral-300 hover:bg-neutral-800 hover:text-white transition-colors motion-reduce:transition-none cursor-pointer ${focusRing}`;
+
+const optionBase = `h-10 px-2 rounded-lg border text-xs font-semibold transition-colors motion-reduce:transition-none cursor-pointer ${focusRing}`;
+const optionIdle =
+  'bg-neutral-900 border-neutral-800 text-neutral-400 hover:text-neutral-200 hover:border-neutral-600';
+
+const INSTRUMENTS: InstrumentType[] = ['guitar', 'ukulele', 'piano'];
+
+export const SidebarDrawer: React.FC<Props> = (props) =>
+  props.isOpen ? <DrawerPanel {...props} /> : null;
+
+const DrawerPanel: React.FC<Props> = ({
   onClose,
   activeTab,
   onSelectTab,
@@ -42,57 +57,95 @@ export const SidebarDrawer: React.FC<Props> = ({
   settings,
   onUpdateSettings
 }) => {
-  if (!isOpen) return null;
+  const panelRef = useRef<HTMLDivElement>(null);
+  useDialogBehavior(panelRef, onClose);
+
+  const themeOptions = [
+    {
+      value: 'stage-black',
+      label: 'OLED Black',
+      title: 'OLED Black: pitch black stage background with amber chords',
+      on: 'bg-black border-amber-400 text-amber-400 font-bold shadow-sm',
+      onPatch: () => ({
+        theme: 'stage-black' as const,
+        chordsColor: settings.chordsColor === '#1d4ed8' ? '#fbbf24' : settings.chordsColor
+      })
+    },
+    {
+      value: 'dark',
+      label: 'Dark Slate',
+      title: 'Dark Slate: cool slate-blue background with sky-cyan chords',
+      on: 'bg-[#1e293b] border-sky-400 text-sky-400 font-bold shadow-sm',
+      onPatch: () => ({
+        theme: 'dark' as const,
+        chordsColor: settings.chordsColor === '#1d4ed8' ? '#38bdf8' : settings.chordsColor
+      })
+    },
+    {
+      value: 'light',
+      label: 'Light Paper',
+      title: 'Light Paper: crisp white background with royal blue chords',
+      on: 'bg-white border-blue-600 text-blue-700 font-bold shadow-sm',
+      onPatch: () => ({ theme: 'light' as const, chordsColor: '#1d4ed8' })
+    }
+  ];
+
+  const themeSelected = themeOptions.some((o) => o.value === settings.theme);
+  const instrumentSelected = INSTRUMENTS.some((i) => i === settings.instrument);
 
   return (
     <div className="fixed inset-0 z-50 flex">
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/70 backdrop-blur-xs transition-opacity"
+        className="fixed inset-0 bg-black/70 backdrop-blur-xs"
         onClick={onClose}
+        aria-hidden="true"
       />
 
-      {/* Drawer Container */}
-      <div className="relative w-72 sm:w-80 h-full bg-neutral-900 border-r border-neutral-800 text-neutral-100 flex flex-col shadow-2xl z-10">
-        {/* Header (SongBook Pro branding) */}
+      {/* Drawer */}
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Main menu"
+        tabIndex={-1}
+        className="relative w-72 sm:w-80 h-full bg-neutral-900 border-r border-neutral-800 text-neutral-100 flex flex-col shadow-2xl z-10 focus:outline-none"
+      >
+        {/* Header */}
         <div className="p-5 border-b border-neutral-800 bg-neutral-950 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-neutral-950 font-black shadow-md shadow-amber-500/20">
-              <Music className="w-5 h-5 fill-current" />
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-9 h-9 shrink-0 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-neutral-950 font-black shadow-md shadow-amber-500/20">
+              <Music className="w-5 h-5 fill-current" aria-hidden="true" />
             </div>
-            <div>
-              <h2 className="font-bold text-base tracking-tight leading-tight">
-                Worship SongBook
-              </h2>
-              <p className="text-[11px] text-neutral-400 font-mono">
-                Stage & Chord Manager
-              </p>
+            <div className="min-w-0">
+              <h2 className="font-bold text-base tracking-tight leading-tight">Worship SongBook</h2>
+              <p className="text-xs text-neutral-400 font-mono">Stage &amp; Chord Manager</p>
             </div>
           </div>
 
           <button
+            type="button"
             onClick={onClose}
-            className="p-1.5 rounded-lg text-neutral-400 hover:text-neutral-100 hover:bg-neutral-800 transition-colors cursor-pointer"
+            aria-label="Close menu"
+            className={`w-10 h-10 shrink-0 flex items-center justify-center rounded-lg text-neutral-400 hover:text-neutral-100 hover:bg-neutral-800 transition-colors motion-reduce:transition-none cursor-pointer ${focusRing}`}
           >
-            <X className="w-5 h-5" />
+            <X className="w-5 h-5" aria-hidden="true" />
           </button>
         </div>
 
-        {/* Navigation Menu Items */}
+        {/* Navigation */}
         <div className="flex-1 overflow-y-auto py-4 px-3 space-y-1 text-sm font-medium">
           <button
+            type="button"
             onClick={() => {
               onSelectTab('library');
               onClose();
             }}
-            className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl border transition-all cursor-pointer ${
-			activeTab === 'library'
-			? 'bg-amber-400 text-neutral-950 font-bold shadow-sm border-amber-400' // ขอบสีเดียวกับพื้นหลังเมื่อเลือก
-			: 'text-neutral-300 hover:bg-sky-700 border-amber-400/80'       // ขอบสีเทาจางๆ เมื่อไม่ได้เลือก
-			}`}
+            aria-current={activeTab === 'library' ? 'page' : undefined}
+            className={`${navBase} ${activeTab === 'library' ? navActive : navIdle}`}
           >
             <div className="flex items-center gap-3">
-              <Music className="w-4 h-4" />
+              <Music className="w-4 h-4" aria-hidden="true" />
               <span>Songs</span>
             </div>
             <span
@@ -107,18 +160,16 @@ export const SidebarDrawer: React.FC<Props> = ({
           </button>
 
           <button
+            type="button"
             onClick={() => {
               onSelectTab('setlists');
               onClose();
             }}
-            className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl border transition-all cursor-pointer ${
-			activeTab === 'setlists'
-			? 'bg-amber-400 text-neutral-950 font-bold shadow-sm border-amber-400' // ขอบสีเดียวกับพื้นหลังเมื่อเลือก
-			: 'text-neutral-300 hover:bg-sky-700 border-amber-400/80'       // ขอบสีเทาจางๆ เมื่อไม่ได้เลือก
-			}`}
+            aria-current={activeTab === 'setlists' ? 'page' : undefined}
+            className={`${navBase} ${activeTab === 'setlists' ? navActive : navIdle}`}
           >
             <div className="flex items-center gap-3">
-              <ListMusic className="w-4 h-4" />
+              <ListMusic className="w-4 h-4" aria-hidden="true" />
               <span>Setlist</span>
             </div>
             <span
@@ -132,147 +183,116 @@ export const SidebarDrawer: React.FC<Props> = ({
             </span>
           </button>
 
-          <div className="pt-3 pb-1 px-3 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">
-            Tools & Practice
-          </div>
+          <h3 className="pt-5 pb-1.5 px-3 text-xs font-semibold text-neutral-400">
+            Tools &amp; practice
+          </h3>
 
           <button
+            type="button"
             onClick={() => {
               onClose();
               onOpenChords();
             }}
-            className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-neutral-300 hover:bg-neutral-800 transition-colors cursor-pointer"
+            className={toolRow}
           >
-            <BookOpen className="w-4 h-4 text-amber-400" />
+            <BookOpen className="w-4 h-4 text-amber-400" aria-hidden="true" />
             <span>Chord Reference</span>
           </button>
 
           <button
+            type="button"
             onClick={() => {
               onClose();
               onOpenMetronome();
             }}
-            className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-neutral-300 hover:bg-neutral-800 transition-colors cursor-pointer"
+            className={toolRow}
           >
-            <Volume2 className="w-4 h-4 text-amber-400" />
+            <Volume2 className="w-4 h-4 text-amber-400" aria-hidden="true" />
             <span>Stage Metronome</span>
           </button>
 
           {onOpenSettings && (
             <button
+              type="button"
               onClick={() => {
                 onClose();
                 onOpenSettings();
               }}
-              className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-neutral-300 hover:bg-neutral-800 transition-colors cursor-pointer"
+              className={`${toolRow} justify-between`}
             >
-              <div className="flex items-center gap-3">
-                <SettingsIcon className="w-4 h-4 text-amber-400" />
+              <span className="flex items-center gap-3">
+                <SettingsIcon className="w-4 h-4 text-amber-400" aria-hidden="true" />
                 <span>การตั้งค่าระบบ (Settings)</span>
-              </div>
-              <span className="text-[10px] text-neutral-500 font-mono">ปรับแต่ง</span>
+              </span>
+              <span className="text-xs text-neutral-400 font-mono">ปรับแต่ง</span>
             </button>
           )}
 
-          {/* Settings Section */}
-          <div className="pt-4 pb-1 px-3 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider flex items-center justify-between">
-            <span>Display & Stage Mode</span>
-            {onOpenSettings && (
-              <button
-                onClick={() => {
-                  onClose();
-                  onOpenSettings();
-                }}
-                className="text-amber-400 hover:underline text-[11px] font-semibold cursor-pointer"
-              >
-                ตั้งค่าทั้งหมด
-              </button>
-            )}
-          </div>
+          <h3 className="pt-5 pb-1.5 px-3 text-xs font-semibold text-neutral-400">
+            Display &amp; stage mode
+          </h3>
 
-          <div className="px-3 py-2 space-y-3 bg-neutral-950/40 rounded-xl border border-neutral-800/80">
-            {/* Theme switcher */}
+          <div className="p-3 space-y-4 bg-neutral-950/40 rounded-xl border border-neutral-800/80">
+            {/* Theme */}
             <div>
-              <span className="block text-xs text-neutral-400 mb-1.5 font-medium">
-                Stage Theme
-              </span>
-              <div className="grid grid-cols-3 gap-1.5 text-xs font-semibold">
-                <button
-                  onClick={() => onUpdateSettings({
-                    theme: 'stage-black',
-                    chordsColor: settings.chordsColor === '#1d4ed8' ? '#fbbf24' : settings.chordsColor
-                  })}
-                  className={`py-1.5 px-2 rounded-lg border transition-all cursor-pointer ${
-                    settings.theme === 'stage-black'
-                      ? 'bg-black border-amber-400 text-amber-400 font-bold shadow-sm'
-                      : 'bg-neutral-900 border-neutral-800 text-neutral-400 hover:text-neutral-200'
-                  }`}
-                  title="OLED Black: Pitch black stage background with amber chords"
-                >
-                  OLED Black
-                </button>
-                <button
-                  onClick={() => onUpdateSettings({
-                    theme: 'dark',
-                    chordsColor: settings.chordsColor === '#1d4ed8' ? '#38bdf8' : settings.chordsColor
-                  })}
-                  className={`py-1.5 px-2 rounded-lg border transition-all cursor-pointer ${
-                    settings.theme === 'dark'
-                      ? 'bg-[#1e293b] border-sky-400 text-sky-400 font-bold shadow-sm'
-                      : 'bg-neutral-900 border-neutral-800 text-neutral-400 hover:text-neutral-200'
-                  }`}
-                  title="Dark Slate: Rich cool slate-blue background with sky-cyan chords"
-                >
-                  Dark Slate
-                </button>
-                <button
-                  onClick={() => onUpdateSettings({
-                    theme: 'light',
-                    chordsColor: '#1d4ed8'
-                  })}
-                  className={`py-1.5 px-2 rounded-lg border transition-all cursor-pointer ${
-                    settings.theme === 'light'
-                      ? 'bg-white border-blue-600 text-blue-700 font-bold shadow-sm'
-                      : 'bg-neutral-900 border-neutral-800 text-neutral-400 hover:text-neutral-200'
-                  }`}
-                  title="Light Paper: Crisp white background with light blue & royal blue chords"
-                >
-                  Light Paper
-                </button>
-              </div>
+              <span className="block text-sm text-neutral-300 mb-2 font-medium">Stage theme</span>
+              <RadioGroup label="Stage theme" className="grid grid-cols-3 gap-1.5">
+                {themeOptions.map((opt, i) => {
+                  const selected = settings.theme === opt.value;
+                  return (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      role="radio"
+                      aria-checked={selected}
+                      tabIndex={tabIndexFor(selected, i, themeSelected)}
+                      onClick={() => onUpdateSettings(opt.onPatch())}
+                      title={opt.title}
+                      className={`${optionBase} ${selected ? opt.on : optionIdle}`}
+                    >
+                      {opt.label}
+                    </button>
+                  );
+                })}
+              </RadioGroup>
             </div>
 
-            {/* Instrument selector */}
+            {/* Instrument */}
             <div>
-              <span className="block text-xs text-neutral-400 mb-1.5 font-medium">
-                Default Instrument
+              <span className="block text-sm text-neutral-300 mb-2 font-medium">
+                Default instrument
               </span>
-              <div className="grid grid-cols-3 gap-1.5 text-xs font-semibold">
-                {(['guitar', 'ukulele', 'piano'] as InstrumentType[]).map((inst) => (
-                  <button
-                    key={inst}
-                    onClick={() => onUpdateSettings({ instrument: inst })}
-                    className={`py-1.5 px-1 rounded-lg capitalize border transition-all cursor-pointer ${
-                      settings.instrument === inst
-                        ? 'bg-amber-400 text-neutral-950 border-amber-400 font-bold'
-                        : 'bg-neutral-900 border-neutral-800 text-neutral-400 hover:text-neutral-200'
-                    }`}
-                  >
-                    {inst}
-                  </button>
-                ))}
-              </div>
+              <RadioGroup label="Default instrument" className="grid grid-cols-3 gap-1.5">
+                {INSTRUMENTS.map((inst, i) => {
+                  const selected = settings.instrument === inst;
+                  return (
+                    <button
+                      key={inst}
+                      type="button"
+                      role="radio"
+                      aria-checked={selected}
+                      tabIndex={tabIndexFor(selected, i, instrumentSelected)}
+                      onClick={() => onUpdateSettings({ instrument: inst })}
+                      className={`${optionBase} capitalize ${
+                        selected ? 'bg-amber-400 text-neutral-950 border-amber-400 font-bold' : optionIdle
+                      }`}
+                    >
+                      {inst}
+                    </button>
+                  );
+                })}
+              </RadioGroup>
             </div>
           </div>
         </div>
 
-        {/* Bottom PWA Install Button */}
+        {/* PWA install */}
         <div className="p-3 border-t border-neutral-800 bg-neutral-950/80">
           <PWAInstallButton variant="full" />
         </div>
 
-        {/* Footer info */}
-        <div className="px-4 py-3 border-t border-neutral-900 bg-neutral-950/90 text-xs text-neutral-500 flex items-center justify-between">
+        {/* Footer */}
+        <div className="px-4 py-3 border-t border-neutral-900 bg-neutral-950/90 text-xs text-neutral-400 flex items-center justify-between">
           <span>Worship SongBook v1.0</span>
           <span>Offline Ready</span>
         </div>

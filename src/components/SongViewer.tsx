@@ -695,10 +695,7 @@ export const SongViewer: React.FC<Props> = ({
         <div className="print-only hidden print-song-head">
           <h1>{song.title}</h1>
           <p>
-            {song.artist || 'Unknown Artist'}
-            {song.tempo ? ` · ${song.tempo} BPM` : ''}
             {song.key ? ` · Key: ${currentKey}` : ''}
-            {capo > 0 ? ` · Capo ${capo}` : ''}
           </p>
         </div>
 

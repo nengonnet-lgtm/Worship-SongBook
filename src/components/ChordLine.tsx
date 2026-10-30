@@ -163,7 +163,7 @@ export const ChordLine: React.FC<ChordLineProps> = ({
   const chordSpan = (chord: string, interactive: boolean, extra?: React.CSSProperties) => (
     <span
       onClick={interactive && chord && onChordClick ? () => onChordClick(chord) : undefined}
-      className={interactive && chord && onChordClick ? 'cursor-pointer hover:underline active:opacity-70' : undefined}
+      className={`chord-token ${interactive && chord && onChordClick ? 'cursor-pointer hover:underline active:opacity-70' : ''}`}
       title={interactive && chord && onChordClick ? `ดูคอร์ด ${chord}` : undefined}
       style={{
         color: chordColor,
@@ -202,9 +202,9 @@ export const ChordLine: React.FC<ChordLineProps> = ({
                     <span
                       key={tIdx}
                       onClick={interactive && onChordClick ? () => onChordClick(token) : undefined}
-                      className={
-                        interactive && onChordClick ? 'cursor-pointer hover:underline active:opacity-70' : undefined
-                      }
+                      className={`chord-token ${
+                        interactive && onChordClick ? 'cursor-pointer hover:underline active:opacity-70' : ''
+                      }`}
                       title={interactive && onChordClick ? `ดูคอร์ด ${token}` : undefined}
                     >
                       {token}
@@ -248,7 +248,7 @@ export const ChordLine: React.FC<ChordLineProps> = ({
               <span
                 key={tIdx}
                 onClick={onChordClick ? () => onChordClick(token) : undefined}
-                className={onChordClick ? 'cursor-pointer hover:underline active:opacity-70' : undefined}
+                className={`chord-token ${onChordClick ? 'cursor-pointer hover:underline active:opacity-70' : ''}`}
               >
                 {token}
               </span>

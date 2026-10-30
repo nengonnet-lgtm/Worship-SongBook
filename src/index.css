@@ -77,15 +77,107 @@
   background: rgba(180, 180, 180, 0.6);
 }
 
+/* ==========================================================================
+   PRINT STYLESHEET
+   Formats chord charts for clean printing on standard paper (A4 / Letter)
+   and hides all interactive app chrome, navigation rails, menus, and bars.
+   ========================================================================== */
 @media print {
-  body {
-    background: white !important;
-    color: black !important;
+  @page {
+    size: A4 portrait;
+    margin: 12mm 14mm 14mm 14mm;
   }
-  .no-print {
+
+  /* Reset layout constraints and dark background colors so multi-page documents paginate naturally */
+  html,
+  body,
+  #root,
+  #root > div,
+  main,
+  .song-viewer-root,
+  .song-viewer-scroll {
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+    position: static !important;
+    background: #ffffff !important;
+    color: #111827 !important;
+    box-shadow: none !important;
+    border: none !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    transform: none !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Hide all app chrome, navigation, headers, drawers, buttons, and popups */
+  nav,
+  aside,
+  header,
+  button,
+  input,
+  select,
+  .no-print,
+  [role="dialog"],
+  [role="alertdialog"],
+  .chord-badges-bar,
+  .metronome,
+  .backdrop-blur-md,
+  .backdrop-blur-xs,
+  [aria-label="Main"],
+  [aria-label="Main menu"],
+  [aria-label="Quick Actions"],
+  [aria-label="Sidebar Navigation"] {
     display: none !important;
   }
-  .print-only {
+
+  /* Elements specifically designated for print */
+  .print-only,
+  .print\:block {
     display: block !important;
   }
+
+  /* High contrast chord formatting on paper:
+     Deep rich navy ink stands out cleanly above lyrics on white paper and prints sharp in both color and B/W */
+  .chord-token {
+    color: #1e3a8a !important;
+    font-weight: 700 !important;
+    text-decoration: none !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Dark legible text for lyrics and notes */
+  .chord-sheet-font,
+  .chord-sheet-font span:not(.chord-token),
+  .chord-sheet-font div {
+    color: #111827 !important;
+  }
+
+  /* Clean section titles (e.g. [Verse 1], [Chorus]) */
+  .section-badge {
+    display: inline-block !important;
+    background: #f3f4f6 !important;
+    color: #111827 !important;
+    border: 1px solid #d1d5db !important;
+    font-weight: 700 !important;
+    font-size: 0.85rem !important;
+    padding: 2px 8px !important;
+    border-radius: 4px !important;
+    margin-bottom: 0.35rem !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Prevent awkward page breaks in the middle of sections or chord lines */
+  .song-section-block,
+  .break-inside-avoid {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
 }
+

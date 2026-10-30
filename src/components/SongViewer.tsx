@@ -26,7 +26,9 @@ import {
   FileCode,
   ChevronDown,
   ListMusic,
-  Menu
+  Menu,
+  Printer,
+  FileDown
 } from 'lucide-react';
 
 /** One row of the "pick a song from the setlist" sheet. `index` is whatever the host's onSelectSong expects. */
@@ -381,6 +383,34 @@ export const SongViewer: React.FC<Props> = ({
     else onPrevSong?.();
   };
 
+  const handleDownloadPDF = () => {
+    // Close overlays before generating PDF
+    setShowQuickSettings(false);
+    setActiveChordDiagram(null);
+    setShowSongPicker(false);
+    setShowExportMenu(false);
+
+    // Set document title temporarily so browsers default to a clean filename in "Save as PDF"
+    const originalTitle = document.title;
+    const safeTitle = song.title.replace(/[\\/:*?"<>|]/g, '_').trim() || 'Song';
+    const artistPart = song.artist ? ` - ${song.artist.replace(/[\\/:*?"<>|]/g, '_').trim()}` : '';
+    document.title = `${safeTitle}${artistPart} (Key ${currentKey}) - ChordSheet`;
+
+    // Modern browsers' print window provides "Save as PDF" using our clean print stylesheet
+    window.print();
+
+    const restoreTimer = window.setTimeout(() => {
+      document.title = originalTitle;
+    }, 1500);
+
+    const handleAfterPrint = () => {
+      document.title = originalTitle;
+      window.clearTimeout(restoreTimer);
+      window.removeEventListener('afterprint', handleAfterPrint);
+    };
+    window.addEventListener('afterprint', handleAfterPrint);
+  };
+
   const handleExportSong = (format: 'chordpro' | 'json' | 'ts' = 'chordpro') => {
     setShowExportMenu(false);
     const safeTitle = song.title.replace(/[\\/:*?"<>|]/g, '_') || 'song';
@@ -486,10 +516,10 @@ export const SongViewer: React.FC<Props> = ({
   return (
     <div
       ref={viewerContainerRef}
-      className={`flex flex-col h-full w-full overflow-hidden select-none relative ${containerBg}`}
+      className={`song-viewer-root flex flex-col h-full w-full overflow-hidden select-none relative ${containerBg}`}
     >
       {/* HEADER BAR */}
-      <header className={`px-3 sm:px-5 py-2.5 border-b backdrop-blur-md flex flex-wrap items-center justify-between gap-x-3 gap-y-2 shrink-0 z-20 ${headerBg}`}>
+      <header className={`no-print px-3 sm:px-5 py-2.5 border-b backdrop-blur-md flex flex-wrap items-center justify-between gap-x-3 gap-y-2 shrink-0 z-20 ${headerBg}`}>
         <div className="flex items-center gap-2.5 min-w-0 flex-1 basis-[240px]">
           {isEmbedded && onOpenSetlistMenu && !isFullscreen && (
             <button
@@ -580,6 +610,28 @@ export const SongViewer: React.FC<Props> = ({
           </button>
 
           <button
+            type="button"
+            onClick={handleDownloadPDF}
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer border shadow-xs ${t.ghostBtn}`}
+            title="ดาวน์โหลดเป็น PDF (Download as PDF) จัดรูปแบบสวยงามตาม Print Stylesheet"
+            aria-label="ดาวน์โหลดเป็น PDF (Download as PDF)"
+          >
+            <FileDown className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+            <span className="hidden sm:inline">Download PDF</span>
+            <span className="sm:hidden">PDF</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleDownloadPDF}
+            className={`p-1.5 rounded-lg border cursor-pointer ${t.ghostBtn}`}
+            title="พิมพ์คอร์ดเพลง / PDF (Print Sheet)"
+            aria-label="พิมพ์คอร์ดเพลง"
+          >
+            <Printer className="w-4 h-4" />
+          </button>
+
+          <button
             onClick={() => setShowQuickSettings(!showQuickSettings)}
             className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
               showQuickSettings ? `${t.accentBtn} border-transparent` : t.ghostBtn
@@ -611,7 +663,7 @@ export const SongViewer: React.FC<Props> = ({
 
       {/* TOP CHORD BADGES BAR */}
       {settings.showChords !== false && parsed.allChords.length > 0 && (
-        <div className={`px-4 sm:px-6 py-2 border-b flex items-center gap-1.5 overflow-x-auto text-xs shrink-0 ${t.subBar}`}>
+        <div className={`no-print chord-badges-bar px-4 sm:px-6 py-2 border-b flex items-center gap-1.5 overflow-x-auto text-xs shrink-0 ${t.subBar}`}>
           <span className={`text-xs font-display font-medium shrink-0 mr-1 flex items-center gap-1 ${t.textMuted}`}>
             <Music className={`w-3 h-3 ${t.accentText}`} />
             Chords:
@@ -634,7 +686,7 @@ export const SongViewer: React.FC<Props> = ({
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
         onTouchCancel={() => (swipeStartRef.current = null)}
-        className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden px-4 sm:px-6 md:px-8 lg:px-12 py-6"
+        className="song-viewer-scroll flex-1 min-w-0 overflow-y-auto overflow-x-hidden px-4 sm:px-6 md:px-8 lg:px-12 py-6 print:overflow-visible print:p-0 print:m-0"
         style={{
           fontSize: `${settings.fontSize || 16}px`,
           lineHeight: 1.5,
@@ -645,11 +697,60 @@ export const SongViewer: React.FC<Props> = ({
           overscrollBehavior: 'contain'
         }}
       >
-        <div className={`max-w-5xl mx-auto ${settings.columns === 2 ? 'grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-6' : 'space-y-6'}`}>
+        {/* PRINT ONLY HEADER: Formatted cleanly for standard paper sizes (A4/Letter) */}
+        <div className="hidden print:block print-sheet-header mb-6 pb-4 border-b-2 border-neutral-900 text-neutral-950">
+          <div className="flex items-baseline justify-between gap-4">
+            <div>
+              <h1 className="font-display font-bold text-2xl tracking-tight text-neutral-950">
+                {song.title}
+              </h1>
+              {song.artist && (
+                <div className="text-sm text-neutral-700 font-sans mt-0.5">
+                  {song.artist}
+                </div>
+              )}
+            </div>
+            <div className="text-right shrink-0">
+              <span className="font-keys font-bold text-base px-2.5 py-0.5 rounded border border-neutral-800 bg-neutral-100 text-neutral-900">
+                Key: {currentKey}
+              </span>
+              {song.key && currentKey !== song.key && (
+                <span className="block text-xs font-keys text-neutral-600 mt-0.5">
+                  (คีย์เดิม: {song.key})
+                </span>
+              )}
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-1 mt-2 text-xs text-neutral-700 font-medium">
+            {song.tempo && (
+              <span>
+                <strong className="text-neutral-900">จังหวะ / BPM:</strong> {song.tempo}
+              </span>
+            )}
+            {song.timeSignature && (
+              <span>
+                <strong className="text-neutral-900">Time:</strong> {song.timeSignature}
+              </span>
+            )}
+            {capo > 0 && (
+              <span>
+                <strong className="text-neutral-900">Capo:</strong> เฟรต {capo}
+              </span>
+            )}
+            {setlistContext?.setlistTitle && (
+              <span>
+                <strong className="text-neutral-900">Setlist:</strong> {setlistContext.setlistTitle} (#{setlistContext.currentIdx + 1})
+              </span>
+            )}
+          </div>
+        </div>
+
+        <div className={`max-w-5xl mx-auto print:max-w-none print:w-full ${settings.columns === 2 ? 'grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-6 print:grid-cols-2 print:gap-x-8 print:gap-y-4' : 'space-y-6 print:space-y-4'}`}>
           {parsed.sections.map((section, sIdx) => (
-            <div key={sIdx} className="break-inside-avoid space-y-3 mb-6">
+            <div key={sIdx} className="song-section-block break-inside-avoid space-y-3 mb-6 print:mb-4">
               {section.title && (
-                <span className={`inline-block px-3.5 py-1 rounded-full text-sm font-display font-medium ${t.numberOff}`}>
+                <span className={`section-badge inline-block px-3.5 py-1 rounded-full text-sm font-display font-medium ${t.numberOff}`}>
                   {section.title}
                 </span>
               )}
@@ -684,6 +785,12 @@ export const SongViewer: React.FC<Props> = ({
               })}
             </div>
           ))}
+          {/* PRINT ONLY FOOTER: Discrete songbook metadata on exported PDF */}
+          <div className="hidden print:flex justify-between items-center text-[10px] text-neutral-500 pt-4 mt-8 border-t border-neutral-300 font-sans">
+            <span>Worship SongBook · {song.title}</span>
+            <span>Key: {currentKey} {capo > 0 ? `· Capo: ${capo}` : ''} {song.tempo ? `· ${song.tempo} BPM` : ''}</span>
+            <span>พิมพ์เมื่อ: {new Date().toLocaleDateString('th-TH')}</span>
+          </div>
         </div>
       </div>
 
@@ -719,10 +826,8 @@ export const SongViewer: React.FC<Props> = ({
           setShowQuickSettings(false);
           onEditSong?.(song);
         }}
-        onPrintSong={() => {
-          setShowQuickSettings(false);
-          window.print();
-        }}
+        onPrintSong={handleDownloadPDF}
+        onDownloadPDF={handleDownloadPDF}
       />
 
       {/* Chord Diagram Popup */}

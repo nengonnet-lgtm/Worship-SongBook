@@ -10,6 +10,7 @@ import { SetlistManager } from './components/SetlistManager';
 import { ChordLibraryModal } from './components/ChordLibraryModal';
 import { SettingsModal } from './components/SettingsModal';
 import { MetronomeBar } from './components/MetronomeBar';
+import { ConfirmDialog } from './components/ConfirmDialog';
 import { OfflineIndicator } from './components/OfflineIndicator';
 import { X } from 'lucide-react';
 import { getThemeStyles, SIGNAL_ON_DARK } from './utils/themeStyles';
@@ -103,6 +104,8 @@ export default function App() {
   const [showChordLibrary, setShowChordLibrary] = useState(false);
   const [showFloatingMetronome, setShowFloatingMetronome] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [sampleUpdate, setSampleUpdate] = useState<{ changed: number; added: number } | null>(null);
+  const [updateNotice, setUpdateNotice] = useState<string | null>(null);
 
   // Sync to localStorage
   useEffect(() => {
@@ -255,6 +258,62 @@ export default function App() {
         setSelectedSong(prevSong);
       }
     }
+  };
+
+  // Toast auto-hide
+  useEffect(() => {
+    if (!updateNotice) return;
+    const id = setTimeout(() => setUpdateNotice(null), 4000);
+    return () => clearTimeout(id);
+  }, [updateNotice]);
+
+  // ---- Update library from the bundled sampleSongs ----
+  // Songs with the same id are replaced by the sampleSongs version, songs only in sampleSongs are added,
+  // songs the user created themselves (ids not in sampleSongs) are kept. Setlists are not touched.
+  const requestSampleUpdate = () => {
+    const byId = new Map(songs.map((s) => [s.id, s]));
+    let changed = 0;
+    let added = 0;
+    SAMPLE_SONGS.forEach((sample) => {
+      const current = byId.get(sample.id);
+      if (!current) added++;
+      else if (JSON.stringify(current) !== JSON.stringify(sample)) changed++;
+    });
+    if (changed + added === 0) {
+      setUpdateNotice('เพลงในเครื่องตรงกับ sampleSongs อยู่แล้ว');
+      return;
+    }
+    setSampleUpdate({ changed, added });
+  };
+
+  const applySampleUpdate = () => {
+    const sampleById = new Map(SAMPLE_SONGS.map((s) => [s.id, s]));
+    const existingIds = new Set(songs.map((s) => s.id));
+    const merged: Song[] = [
+      ...songs.map((s) => sampleById.get(s.id) ?? s),
+      ...SAMPLE_SONGS.filter((s) => !existingIds.has(s.id))
+    ];
+    setSongs(merged);
+    try {
+      localStorage.setItem(STORAGE_KEYS.SONGS, JSON.stringify(merged));
+    } catch (e) {
+      console.warn('Failed to save songs to localStorage', e);
+    }
+    setSelectedSong((prev) => (prev ? merged.find((s) => s.id === prev.id) ?? prev : prev));
+    const { changed, added } = sampleUpdate ?? { changed: 0, added: 0 };
+    setSampleUpdate(null);
+    setUpdateNotice(`อัปเดตแล้ว: แทนที่ ${changed} เพลง, เพิ่มใหม่ ${added} เพลง`);
+  };
+
+  // Stage mode: jump straight to any song of the running setlist (index = position in setlist.songIds)
+  const handleJumpSetlistSong = (idx: number) => {
+    if (!activeSetlistContext) return;
+    const latest =
+      setlists.find((sl) => sl.id === activeSetlistContext.setlist.id) || activeSetlistContext.setlist;
+    const target = songs.find((s) => s.id === latest.songIds[idx]);
+    if (!target) return;
+    setActiveSetlistContext({ setlist: latest, currentIdx: idx });
+    setSelectedSong(target);
   };
 
   const handleImportSong = async (file: File) => {
@@ -495,7 +554,21 @@ export default function App() {
 
   const activeSetlist = setlists.find((sl) => sl.id === activeSetlistId) || null;
 
-  const appBg = getThemeStyles(settings.theme).page;
+  // Song list for the stage-mode picker (songs deleted from the library are skipped)
+  const pickerSetlist = activeSetlistContext
+    ? setlists.find((sl) => sl.id === activeSetlistContext.setlist.id) || activeSetlistContext.setlist
+    : null;
+  const setlistPickerSongs = pickerSetlist
+    ? pickerSetlist.songIds.flatMap((id, slot) => {
+        const s = songs.find((x) => x.id === id);
+        return s
+          ? [{ index: slot, id: s.id, title: s.title, key: pickerSetlist.songKeys?.[s.id] || s.key }]
+          : [];
+      })
+    : undefined;
+
+  const appTheme = getThemeStyles(settings.theme);
+  const appBg = appTheme.page;
 
   return (
     <div className={`flex flex-col h-dvh w-full overflow-hidden select-none ${appBg}`}>
@@ -513,6 +586,7 @@ export default function App() {
         onOpenChords={() => setShowChordLibrary(true)}
         onOpenMetronome={() => setShowFloatingMetronome(true)}
         onOpenSettings={() => setShowSettingsModal(true)}
+        onUpdateSongs={requestSampleUpdate}
         settings={settings}
         onUpdateSettings={updateSettings}
       />
@@ -525,6 +599,7 @@ export default function App() {
           onOpenChords={() => setShowChordLibrary(true)}
           onOpenMetronome={() => setShowFloatingMetronome(true)}
           onOpenSettings={() => setShowSettingsModal(true)}
+          onUpdateSongs={requestSampleUpdate}
           isMetronomeOpen={showFloatingMetronome}
           theme={settings.theme}
         />
@@ -532,7 +607,7 @@ export default function App() {
       <main className="flex-1 flex overflow-hidden min-w-0">
         {selectedSong ? (
           <SongViewer
-            key={`${selectedSong.id}-${activeSetlistContext?.setlist?.id || 'standalone'}`}
+            key={activeSetlistContext?.setlist?.id || 'standalone'}
             song={selectedSong}
             settings={settings}
             onUpdateSettings={updateSettings}
@@ -573,6 +648,8 @@ export default function App() {
                     setlistTitle: activeSetlistContext.setlist.title,
                     setlistId: activeSetlistContext.setlist.id,
                     targetKey: activeSetlistContext.setlist.songKeys?.[selectedSong.id],
+                    songs: setlistPickerSongs,
+                    onSelectSong: handleJumpSetlistSong,
                     onKeyChange: (songId, newKey) => {
                       if (activeSetlistContext) {
                         const currentSl = activeSetlistContext.setlist;
@@ -678,6 +755,27 @@ export default function App() {
           settings={settings}
           onUpdateSettings={updateSettings}
         />
+      )}
+
+      {sampleUpdate && (
+        <ConfirmDialog
+          tone="danger"
+          theme={settings.theme}
+          title="อัปเดตเพลงจาก sampleSongs ?"
+          message={`แทนที่ ${sampleUpdate.changed} เพลง และเพิ่มใหม่ ${sampleUpdate.added} เพลง การแก้ไขที่ทำไว้ในเพลงที่ถูกแทนที่จะหายไป ส่วนเพลงที่คุณเพิ่มเองและเซ็ตลิสต์จะไม่ถูกแตะต้อง`}
+          confirmLabel="อัปเดตเพลง"
+          onCancel={() => setSampleUpdate(null)}
+          onConfirm={applySampleUpdate}
+        />
+      )}
+
+      {updateNotice && (
+        <div
+          role="status"
+          className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] max-w-[calc(100vw-2rem)] px-4 py-2.5 rounded-xl border shadow-2xl text-sm font-semibold ${appTheme.popover}`}
+        >
+          {updateNotice}
+        </div>
       )}
 
       <OfflineIndicator />

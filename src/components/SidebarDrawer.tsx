@@ -5,7 +5,8 @@ import {
   BookOpen,
   Settings as SettingsIcon,
   X,
-  Volume2
+  Volume2,
+  RefreshCw
 } from 'lucide-react';
 import { AppSettings, InstrumentType } from '../types/song';
 import { PWAInstallButton } from './PWAInstallButton';
@@ -23,6 +24,7 @@ interface Props {
   onOpenChords: () => void;
   onOpenMetronome: () => void;
   onOpenSettings?: () => void;
+  onUpdateSongs?: () => void;
   settings: AppSettings;
   onUpdateSettings: (settings: Partial<AppSettings>) => void;
 }
@@ -55,6 +57,7 @@ const DrawerPanel: React.FC<Props> = ({
   onOpenChords,
   onOpenMetronome,
   onOpenSettings,
+  onUpdateSongs,
   settings,
   onUpdateSettings
 }) => {
@@ -211,6 +214,22 @@ const DrawerPanel: React.FC<Props> = ({
             <Volume2 className="w-4 h-4 text-[#F59E0B]" aria-hidden="true" />
             <span>Stage Metronome</span>
           </button>
+
+          {onUpdateSongs && (
+            <button
+              type="button"
+              onClick={() => {
+                onClose();
+                onUpdateSongs();
+              }}
+              className={`${toolRow} justify-between`}
+            >
+              <span className="flex items-center gap-3">
+                <RefreshCw className="w-4 h-4 text-[#F59E0B]" aria-hidden="true" />
+                <span>อัปเดตเพลงจาก sampleSongs</span>
+              </span>
+            </button>
+          )}
 
           {onOpenSettings && (
             <button

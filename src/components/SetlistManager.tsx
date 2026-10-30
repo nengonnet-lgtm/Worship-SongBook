@@ -323,6 +323,8 @@ export const SetlistManager: React.FC<Props> = ({
   const [showAddSongModal, setShowAddSongModal] = useState(false);
   const [showSetSwitcher, setShowSetSwitcher] = useState(false);
   const [isReordering, setIsReordering] = useState(false);
+  // Portrait / narrow layouts: the set list is a collapsed bar until the player asks for it
+  const [listOpen, setListOpen] = useState(false);
   const [pendingDeleteSet, setPendingDeleteSet] = useState<Setlist | null>(null);
 
   const switcherRef = useRef<HTMLDivElement>(null);
@@ -353,6 +355,12 @@ export const SetlistManager: React.FC<Props> = ({
   );
 
   const activeSongs: Song[] = entries.map((e) => e.song);
+  const pickerSongs = entries.map(({ song }, i) => ({
+    index: i,
+    id: song.id,
+    title: song.title,
+    key: activeSetlist?.songKeys?.[song.id] || song.key
+  }));
   const currentSong = activeSongs[selectedSongIdx] || null;
   const totalDurationMinutes = Math.round(
     activeSongs.reduce((acc, s) => acc + (s.duration || 180), 0) / 60
@@ -406,17 +414,114 @@ export const SetlistManager: React.FC<Props> = ({
 
   const openAddSongs = () => setShowAddSongModal(true);
 
+  // Esc closes the slide-out list (unless a dialog / menu on top of it should get the key first)
+  useEffect(() => {
+    if (!listOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !showCreateModal && !showAddSongModal && !pendingDeleteSet && !showSetSwitcher) {
+        setListOpen(false);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [listOpen, showCreateModal, showAddSongModal, pendingDeleteSet, showSetSwitcher]);
+
   const toolBtn = `h-10 rounded-lg border flex items-center justify-center gap-1.5 cursor-pointer transition-colors motion-reduce:transition-none disabled:opacity-40 disabled:pointer-events-none ${t.ghostBtn} ${t.focus}`;
   const rowIconBtn = `w-9 h-9 flex items-center justify-center rounded-lg cursor-pointer disabled:opacity-25 disabled:pointer-events-none ${t.iconBtn} ${t.focus}`;
 
   return (
-    <div className={`flex-1 flex flex-col md:flex-row h-full w-full overflow-hidden ${t.page}`}>
-      {/* LEFT PANE */}
+    <div className={`relative flex-1 flex flex-col h-full min-h-0 w-full overflow-hidden ${t.page}`}>
+      {/* Tablets (md and up): dim backdrop behind the slide-out setlist */}
       <div
-        className={`w-full md:w-[372px] md:border-r flex flex-col shrink-0 h-full overflow-hidden ${t.subBar}`}
+        aria-hidden="true"
+        onClick={() => setListOpen(false)}
+        className={`hidden md:block absolute inset-0 z-40 bg-black/50 transition-opacity duration-200 motion-reduce:transition-none ${
+          listOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
+        }`}
+      />
+
+      {/* SETLIST PANE
+          Tablets (md and up): a drawer that slides out from the left over the lyrics, so the lyrics always get the full width.
+          Phones: a one-row bar above the lyrics that expands into the full list. */}
+      <div
+        role="region"
+        aria-label="Setlist"
+        className={`w-full border-b flex flex-col shrink-0 overflow-hidden ${
+          listOpen ? 'max-h-[62dvh]' : ''
+        } md:absolute md:inset-y-0 md:left-0 md:z-50 md:w-[372px] md:max-w-[88%] md:max-h-none md:h-full md:border-b-0 md:border-r md:shadow-2xl md:transition-[transform,visibility] md:duration-200 motion-reduce:md:transition-none ${
+          listOpen ? 'md:translate-x-0 md:visible' : 'md:-translate-x-full md:invisible'
+        } ${t.subBar}`}
       >
+        {/* Compact bar (portrait / narrow only) */}
+        <div className={`${listOpen ? 'hidden' : 'flex'} md:hidden items-center gap-2 px-3 py-2.5 shrink-0`}>
+          <button
+            type="button"
+            onClick={onOpenMenu}
+            aria-label="Open navigation menu"
+            className={`md:hidden w-11 h-11 shrink-0 flex items-center justify-center rounded-xl cursor-pointer ${t.iconBtn} ${t.focus}`}
+          >
+            <Menu className="w-5 h-5" aria-hidden="true" />
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setListOpen(true)}
+            aria-expanded={false}
+            title="เลือกเพลงจากเซ็ตลิสต์"
+            className={`min-w-0 flex-1 min-h-11 px-3 rounded-xl border flex items-center gap-3 text-left cursor-pointer ${t.ghostBtn} ${t.focus}`}
+          >
+            <span
+              className={`w-8 h-8 rounded-[10px] flex items-center justify-center font-keys font-bold text-sm shrink-0 ${
+                currentSong ? t.numberOn : t.numberOff
+              }`}
+            >
+              {currentSong ? selectedSongIdx + 1 : '–'}
+            </span>
+            <span className="min-w-0 flex-1 flex flex-col">
+              <span className="font-display font-semibold text-[15px] leading-tight truncate">
+                {currentSong ? currentSong.title : activeSetlist ? 'เลือกเพลง' : 'ยังไม่มีเซ็ตลิสต์'}
+              </span>
+              <span className={`text-xs truncate ${t.textMuted}`}>
+                {activeSetlist ? `${activeSetlist.title} · ${activeSongs.length} เพลง` : 'แตะเพื่อสร้างเซ็ตลิสต์'}
+              </span>
+            </span>
+            <ChevronDown className="w-4 h-4 opacity-60 shrink-0" aria-hidden="true" />
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setSelectedSongIdx(Math.max(0, selectedSongIdx - 1))}
+            disabled={activeSongs.length === 0 || selectedSongIdx === 0}
+            aria-label="เพลงก่อนหน้า"
+            className={`w-11 h-11 shrink-0 rounded-xl border flex items-center justify-center cursor-pointer disabled:opacity-40 disabled:pointer-events-none ${t.ghostBtn} ${t.focus}`}
+          >
+            <ChevronLeft className="w-5 h-5" aria-hidden="true" />
+          </button>
+          <button
+            type="button"
+            onClick={() => setSelectedSongIdx(Math.min(activeSongs.length - 1, selectedSongIdx + 1))}
+            disabled={activeSongs.length === 0 || selectedSongIdx >= activeSongs.length - 1}
+            aria-label="เพลงถัดไป"
+            className={`w-11 h-11 shrink-0 rounded-xl border flex items-center justify-center cursor-pointer disabled:opacity-40 disabled:pointer-events-none ${t.ghostBtn} ${t.focus}`}
+          >
+            <ChevronRight className="w-5 h-5" aria-hidden="true" />
+          </button>
+          {activeSetlist && (
+            <button
+              type="button"
+              onClick={() => onStartPerformance(activeSetlist, selectedSongIdx)}
+              disabled={activeSongs.length === 0}
+              aria-label="Fullscreen stage mode"
+              title="โหมดเวทีเต็มจอ (Stage Mode)"
+              className={`w-11 h-11 shrink-0 rounded-xl border flex items-center justify-center cursor-pointer disabled:opacity-40 disabled:pointer-events-none ${t.ghostBtn} ${t.focus}`}
+            >
+              <Maximize2 className="w-5 h-5" aria-hidden="true" />
+            </button>
+          )}
+        </div>
+
         {/* Header */}
-        <div className="px-5 pt-5 pb-4 shrink-0">
+        <div className={`px-5 pt-5 pb-4 shrink-0 ${listOpen ? 'block' : 'hidden'} md:block`}>
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -570,7 +675,7 @@ export const SetlistManager: React.FC<Props> = ({
 
         {/* Reorder toggle: move / remove buttons only appear while this is on, so they cannot be hit by accident */}
         {activeSongs.length > 0 && (
-          <div className="px-3.5 pt-2.5 flex items-center justify-between gap-2">
+          <div className={`px-3.5 pt-2.5 ${listOpen ? 'flex' : 'hidden'} md:flex items-center justify-between gap-2`}>
             <p className={`text-xs ${t.textMuted}`}>
               {isReordering ? 'ใช้ลูกศรเลื่อนลำดับ หรือเอาเพลงออกจากเซ็ต' : 'แตะเพลงเพื่อดูคอร์ด'}
             </p>
@@ -598,7 +703,7 @@ export const SetlistManager: React.FC<Props> = ({
         )}
 
         {/* Songs list */}
-        <div className="flex-1 overflow-y-auto p-2.5">
+        <div className={`${listOpen ? 'block' : 'hidden'} md:block flex-1 overflow-y-auto p-2.5`}>
           {activeSongs.length === 0 ? (
             <div className={`text-center py-16 px-4 flex flex-col items-center gap-2 ${t.textMuted}`}>
               <Music className="w-10 h-10 mb-1 opacity-50" aria-hidden="true" />
@@ -630,7 +735,10 @@ export const SetlistManager: React.FC<Props> = ({
                     <div className="flex items-center">
                       <button
                         type="button"
-                        onClick={() => setSelectedSongIdx(index)}
+                        onClick={() => {
+                          setSelectedSongIdx(index);
+                          setListOpen(false);
+                        }}
                         aria-current={isSelected ? 'true' : undefined}
                         className={`flex-1 min-w-0 flex items-center gap-3.5 p-3 text-left rounded-2xl cursor-pointer ${t.focus}`}
                       >
@@ -706,7 +814,7 @@ export const SetlistManager: React.FC<Props> = ({
 
         {/* Prev / Next */}
         {activeSongs.length > 0 && (
-          <div className={`p-2.5 border-t flex items-center justify-between gap-2 shrink-0 ${t.bar}`}>
+          <div className={`p-2.5 border-t ${listOpen ? 'flex' : 'hidden'} md:flex items-center justify-between gap-2 shrink-0 ${t.bar}`}>
             <button
               type="button"
               onClick={() => setSelectedSongIdx(Math.max(0, selectedSongIdx - 1))}
@@ -732,18 +840,31 @@ export const SetlistManager: React.FC<Props> = ({
             </button>
           </div>
         )}
+
+        {/* Close the list / drawer */}
+        <button
+          type="button"
+          onClick={() => setListOpen(false)}
+          aria-expanded={listOpen}
+          className={`${listOpen ? 'flex' : 'hidden'} md:flex h-11 border-t items-center justify-center gap-1.5 text-sm font-semibold cursor-pointer shrink-0 ${t.bar} ${t.focus}`}
+        >
+          <ChevronDown className="w-4 h-4 rotate-180 md:hidden" aria-hidden="true" />
+          <ChevronLeft className="w-4 h-4 hidden md:block" aria-hidden="true" />
+          ซ่อนรายการเพลง
+        </button>
       </div>
 
-      {/* RIGHT PANE */}
+      {/* RIGHT PANE (min-w-0 / min-h-0 so the lyrics can never push the pane wider than the screen) */}
       <div
-        className={`flex-1 flex flex-col h-full overflow-hidden relative ${
+        className={`flex-1 min-w-0 min-h-0 flex flex-col overflow-hidden relative ${
           t.name === 'stage-black' ? 'bg-neutral-950 text-neutral-100' : t.page
         }`}
       >
         {currentSong ? (
           <SongViewer
-            key={`${currentSong.id}-${activeSetlist?.id}`}
+            key={activeSetlist?.id ?? 'none'}
             isEmbedded={true}
+            onOpenSetlistMenu={() => setListOpen(true)}
             song={currentSong}
             settings={settings}
             onUpdateSettings={onUpdateSettings}
@@ -772,28 +893,69 @@ export const SetlistManager: React.FC<Props> = ({
               targetKey: activeSetlist?.songKeys?.[currentSong.id],
               onKeyChange: (songId, newKey) => {
                 handleSongKeyChange(songId, newKey);
-              }
+              },
+              songs: pickerSongs,
+              onSelectSong: (idx) => setSelectedSongIdx(idx)
             }}
           />
         ) : (
-          <div className={`flex-1 flex flex-col items-center justify-center p-8 text-center ${t.textMuted}`}>
+          <div className={`flex-1 flex flex-col items-center justify-center p-8 text-center relative ${t.textMuted}`}>
+            {/* Tablets: the setlist drawer is the only place to switch / create / delete sets, so it must stay reachable */}
+            <button
+              type="button"
+              onClick={() => setListOpen(true)}
+              aria-label="เปิดเมนูเซ็ตลิสต์"
+              title="เมนูเซ็ตลิสต์"
+              className={`hidden md:flex absolute top-4 left-4 w-11 h-11 items-center justify-center rounded-xl border cursor-pointer ${t.ghostBtn} ${t.focus}`}
+            >
+              <Menu className="w-5 h-5" aria-hidden="true" />
+            </button>
+
             <Music className="w-14 h-14 mb-3 opacity-40" aria-hidden="true" />
             <h3 className={`text-base font-bold ${t.textStrong}`}>
-              {activeSongs.length === 0 ? 'No songs in this setlist' : 'Select a song from the left list'}
+              {!activeSetlist
+                ? 'ยังไม่มีเซ็ตลิสต์'
+                : activeSongs.length === 0
+                  ? 'No songs in this setlist'
+                  : 'Select a song from the setlist'}
             </h3>
             <p className="text-sm max-w-sm mt-1">
-              {activeSongs.length === 0
-                ? 'Click "+ Add" on the left panel to populate this setlist.'
-                : 'Click any song in the left list to view its chords, lyrics, and transpose settings here.'}
+              {!activeSetlist
+                ? 'สร้างเซ็ตลิสต์ใหม่เพื่อจัดลำดับเพลงสำหรับการร้อง'
+                : activeSongs.length === 0
+                  ? 'กด “+ Add Songs Now” เพื่อเพิ่มเพลงเข้าเซ็ตนี้'
+                  : 'Pick any song from the setlist to view its chords, lyrics, and transpose settings here.'}
             </p>
-            {activeSongs.length === 0 && (
+
+            {!activeSetlist && (
+              <button
+                type="button"
+                onClick={() => setShowCreateModal(true)}
+                className={`mt-4 h-11 px-5 rounded-lg text-sm font-bold flex items-center gap-1.5 cursor-pointer ${t.accentBtn} ${t.focus}`}
+              >
+                <Plus className="w-4 h-4" strokeWidth={2.5} aria-hidden="true" />
+                สร้างเซ็ตลิสต์
+              </button>
+            )}
+
+            {activeSetlist && activeSongs.length === 0 && (
               <button
                 type="button"
                 onClick={openAddSongs}
-                disabled={!activeSetlist}
-                className={`mt-4 h-11 px-5 rounded-lg text-sm font-bold cursor-pointer disabled:opacity-40 disabled:pointer-events-none ${t.accentBtn} ${t.focus}`}
+                className={`mt-4 h-11 px-5 rounded-lg text-sm font-bold cursor-pointer ${t.accentBtn} ${t.focus}`}
               >
                 + Add Songs Now
+              </button>
+            )}
+
+            {activeSetlist && (
+              <button
+                type="button"
+                onClick={() => setListOpen(true)}
+                className={`hidden md:flex mt-3 h-11 px-5 rounded-lg border text-sm font-semibold items-center gap-2 cursor-pointer ${t.ghostBtn} ${t.focus}`}
+              >
+                <Menu className="w-4 h-4" aria-hidden="true" />
+                เปิดรายการเพลง
               </button>
             )}
           </div>

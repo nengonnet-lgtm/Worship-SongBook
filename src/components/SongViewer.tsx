@@ -694,9 +694,6 @@ export const SongViewer: React.FC<Props> = ({
         {/* Printed page only: song title block (the header bar is hidden when printing) */}
         <div className="print-only hidden print-song-head">
           <h1>{song.title}</h1>
-          <p>
-            {song.key ? ` · Key: ${currentKey}` : ''}
-          </p>
         </div>
 
         <div

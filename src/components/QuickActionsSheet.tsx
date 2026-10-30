@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Sliders, RotateCcw, Printer, Edit3, Eye, EyeOff, Columns, Type, FileDown } from 'lucide-react';
+import { X, Sliders, RotateCcw, Printer, Edit3, Eye, EyeOff, Columns, Type } from 'lucide-react';
 import { AppSettings, Song } from '../types/song';
 import { transposeNote } from '../utils/chordUtils';
 
@@ -17,7 +17,6 @@ interface Props {
   onUpdateSettings: (settings: Partial<AppSettings>) => void;
   onEditSong: () => void;
   onPrintSong: () => void;
-  onDownloadPDF?: () => void;
 }
 
 export const QuickActionsSheet: React.FC<Props> = ({
@@ -33,8 +32,7 @@ export const QuickActionsSheet: React.FC<Props> = ({
   settings,
   onUpdateSettings,
   onEditSong,
-  onPrintSong,
-  onDownloadPDF
+  onPrintSong
 }) => {
   if (!isOpen) return null;
 
@@ -337,7 +335,7 @@ export const QuickActionsSheet: React.FC<Props> = ({
             </div>
           </div>
 
-          {/* 7. Action Buttons (Edit & Download PDF) */}
+          {/* 7. Action Buttons (Edit & Print) */}
           <div className="grid grid-cols-2 gap-1.5 pt-0.5">
             <button
               type="button"
@@ -355,14 +353,12 @@ export const QuickActionsSheet: React.FC<Props> = ({
               type="button"
               onClick={() => {
                 onClose();
-                if (onDownloadPDF) onDownloadPDF();
-                else onPrintSong();
+                onPrintSong();
               }}
               className="flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-200 text-[11px] font-semibold transition-colors cursor-pointer border border-neutral-700"
-              title="ดาวน์โหลดเป็นเอกสาร PDF (Download as PDF)"
             >
-              <FileDown className="w-3 h-3 text-rose-400" />
-              <span>Download PDF</span>
+              <Printer className="w-3 h-3 text-sky-400" />
+              <span>พิมพ์ / PDF</span>
             </button>
           </div>
         </div>

@@ -163,7 +163,7 @@ export const ChordLine: React.FC<ChordLineProps> = ({
   const chordSpan = (chord: string, interactive: boolean, extra?: React.CSSProperties) => (
     <span
       onClick={interactive && chord && onChordClick ? () => onChordClick(chord) : undefined}
-      className={`chord-token ${interactive && chord && onChordClick ? 'cursor-pointer hover:underline active:opacity-70' : ''}`}
+      className={interactive && chord && onChordClick ? 'cursor-pointer hover:underline active:opacity-70' : undefined}
       title={interactive && chord && onChordClick ? `ดูคอร์ด ${chord}` : undefined}
       style={{
         color: chordColor,
@@ -202,9 +202,9 @@ export const ChordLine: React.FC<ChordLineProps> = ({
                     <span
                       key={tIdx}
                       onClick={interactive && onChordClick ? () => onChordClick(token) : undefined}
-                      className={`chord-token ${
-                        interactive && onChordClick ? 'cursor-pointer hover:underline active:opacity-70' : ''
-                      }`}
+                      className={
+                        interactive && onChordClick ? 'cursor-pointer hover:underline active:opacity-70' : undefined
+                      }
                       title={interactive && onChordClick ? `ดูคอร์ด ${token}` : undefined}
                     >
                       {token}
@@ -248,7 +248,7 @@ export const ChordLine: React.FC<ChordLineProps> = ({
               <span
                 key={tIdx}
                 onClick={onChordClick ? () => onChordClick(token) : undefined}
-                className={`chord-token ${onChordClick ? 'cursor-pointer hover:underline active:opacity-70' : ''}`}
+                className={onChordClick ? 'cursor-pointer hover:underline active:opacity-70' : undefined}
               >
                 {token}
               </span>
@@ -277,6 +277,7 @@ export const ChordLine: React.FC<ChordLineProps> = ({
       <div
         ref={measureRef}
         aria-hidden="true"
+        className="print:hidden"
         style={{
           position: 'absolute',
           left: 0,
@@ -291,7 +292,11 @@ export const ChordLine: React.FC<ChordLineProps> = ({
         {renderExact(false)}
       </div>
 
-      {wrapped ? renderWrapped() : renderExact(true)}
+      <div className="print:hidden">{wrapped ? renderWrapped() : renderExact(true)}</div>
+
+      {/* Printed page: always the wrapping layout, so a long line never runs off the paper
+          (the screen layout was measured for the screen width, not for the page width) */}
+      <div className="hidden print:block">{renderWrapped()}</div>
     </div>
   );
 };

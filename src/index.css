@@ -77,107 +77,122 @@
   background: rgba(180, 180, 180, 0.6);
 }
 
-/* ==========================================================================
-   PRINT STYLESHEET
-   Formats chord charts for clean printing on standard paper (A4 / Letter)
-   and hides all interactive app chrome, navigation rails, menus, and bars.
-   ========================================================================== */
+/* ---------------------------------------------------------------------------------------------
+   Printing (Ctrl+P, or the print button in Quick Actions): A4 portrait, black on white.
+   The song view is the element with class "print-area". When one is on screen, everything that is
+   neither the song view nor one of its ancestors is hidden, and the ancestors lose their fixed
+   heights / scrolling so the whole song flows across as many pages as it needs.
+   (Safari on iPad ignores @page size: pick the paper in the print sheet.)
+   --------------------------------------------------------------------------------------------- */
+@page {
+  size: A4 portrait;
+  margin: 14mm 12mm;
+}
+
 @media print {
-  @page {
-    size: A4 portrait;
-    margin: 12mm 14mm 14mm 14mm;
-  }
-
-  /* Reset layout constraints and dark background colors so multi-page documents paginate naturally */
   html,
-  body,
-  #root,
-  #root > div,
-  main,
-  .song-viewer-root,
-  .song-viewer-scroll {
+  body {
+    background: #fff !important;
+    color: #000 !important;
     height: auto !important;
-    min-height: 0 !important;
-    max-height: none !important;
     overflow: visible !important;
-    position: static !important;
-    background: #ffffff !important;
-    color: #111827 !important;
-    box-shadow: none !important;
-    border: none !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    padding: 0 !important;
-    margin: 0 !important;
-    transform: none !important;
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
   }
-
-  /* Hide all app chrome, navigation, headers, drawers, buttons, and popups */
-  nav,
-  aside,
-  header,
-  button,
-  input,
-  select,
-  .no-print,
-  [role="dialog"],
-  [role="alertdialog"],
-  .chord-badges-bar,
-  .metronome,
-  .backdrop-blur-md,
-  .backdrop-blur-xs,
-  [aria-label="Main"],
-  [aria-label="Main menu"],
-  [aria-label="Quick Actions"],
-  [aria-label="Sidebar Navigation"] {
+  .no-print {
     display: none !important;
   }
-
-  /* Elements specifically designated for print */
-  .print-only,
-  .print\:block {
+  .print-only {
     display: block !important;
   }
 
-  /* High contrast chord formatting on paper:
-     Deep rich navy ink stands out cleanly above lyrics on white paper and prints sharp in both color and B/W */
-  .chord-token {
-    color: #1e3a8a !important;
-    font-weight: 700 !important;
-    text-decoration: none !important;
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
+  /* 1. Hide everything that is not the song view or one of its ancestors */
+  body:has(.print-area) *:not(.print-area):not(.print-area *):not(:has(.print-area)) {
+    display: none !important;
   }
 
-  /* Dark legible text for lyrics and notes */
-  .chord-sheet-font,
-  .chord-sheet-font span:not(.chord-token),
-  .chord-sheet-font div {
-    color: #111827 !important;
+  /* 2. Ancestors of the song view: plain blocks, no fixed height / scroll / transform */
+  body:has(.print-area) *:has(.print-area):not(.print-area) {
+    display: block !important;
+    position: static !important;
+    inset: auto !important;
+    width: auto !important;
+    max-width: none !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    overflow: visible !important;
+    transform: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
   }
 
-  /* Clean section titles (e.g. [Verse 1], [Chorus]) */
-  .section-badge {
-    display: inline-block !important;
-    background: #f3f4f6 !important;
-    color: #111827 !important;
-    border: 1px solid #d1d5db !important;
-    font-weight: 700 !important;
-    font-size: 0.85rem !important;
-    padding: 2px 8px !important;
-    border-radius: 4px !important;
-    margin-bottom: 0.35rem !important;
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
+  /* 3. The song view itself */
+  .print-area {
+    display: block !important;
+    position: static !important;
+    width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+  .print-area,
+  .print-area * {
+    color: #000 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+    backdrop-filter: none !important;
+  }
+  .print-area .fixed {
+    display: none !important;
+  }
+  .print-scroll {
+    display: block !important;
+    height: auto !important;
+    overflow: visible !important;
+    padding: 0 !important;
+    flex: none !important;
+  }
+  .print-song-head {
+    margin-bottom: 5mm;
+    padding-bottom: 2mm;
+    border-bottom: 0.4mm solid #000;
+  }
+  .print-song-head h1 {
+    font-family: 'Prompt', 'Sarabun', system-ui, sans-serif;
+    font-size: 18pt;
+    font-weight: 600;
+    line-height: 1.2;
+  }
+  .print-song-head p {
+    font-family: 'Sarabun', system-ui, sans-serif;
+    font-size: 10pt;
+    margin-top: 1mm;
   }
 
-  /* Prevent awkward page breaks in the middle of sections or chord lines */
-  .song-section-block,
-  .break-inside-avoid {
-    break-inside: avoid !important;
-    page-break-inside: avoid !important;
+  .print-grid {
+    display: block !important;
+    max-width: none !important;
+    margin: 0 !important;
+  }
+  .print-grid[data-print-cols='1'] {
+    font-size: 11pt !important;
+  }
+  .print-grid[data-print-cols='2'] {
+    font-size: 9.5pt !important;
+    column-count: 2;
+    column-gap: 10mm;
+  }
+  .print-section {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    margin-bottom: 5mm !important;
+  }
+  .print-section-title {
+    border: 0.3mm solid #000;
+    padding: 0.3mm 3mm !important;
+    font-weight: 700;
+    font-size: 9pt !important;
   }
 }
-

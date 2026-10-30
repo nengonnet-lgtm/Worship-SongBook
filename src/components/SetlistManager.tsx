@@ -184,13 +184,22 @@ const AddSongsDialog: React.FC<{
   useDialogBehavior(panelRef, onClose);
 
   const visible = useMemo(() => {
-    const q = query.toLowerCase();
-    return songs.filter(
-      (song) =>
-        song.title.toLowerCase().includes(q) ||
-        (song.artist && song.artist.toLowerCase().includes(q)) ||
-        (song.key && song.key.toLowerCase().includes(q))
-    );
+    const q = query.toLowerCase().trim();
+    if (!q) return songs;
+    // Title matches first (exact, then starts-with, then contains), then artist / key matches
+    const scored = songs.flatMap((song) => {
+      const title = song.title.toLowerCase();
+      let rank: number;
+      if (title === q) rank = 0;
+      else if (title.startsWith(q)) rank = 1;
+      else if (title.includes(q)) rank = 2;
+      else if ((song.artist && song.artist.toLowerCase().includes(q)) || (song.key && song.key.toLowerCase().includes(q)))
+        rank = 3;
+      else return [];
+      return [{ song, rank }];
+    });
+    scored.sort((a, b) => a.rank - b.rank);
+    return scored.map((entry) => entry.song);
   }, [songs, query]);
 
   const toggle = (songId: string) =>

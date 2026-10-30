@@ -283,8 +283,43 @@ export const SongList: React.FC<Props> = ({
 
   const t = getThemeStyles(settings?.theme);
 
+  // Lyrics with the [chord] markers removed, so a word that a chord splits in the middle can still be found
+  const lyricIndex = useMemo(() => {
+    const index = new Map<string, string>();
+    songs.forEach((song) => {
+      index.set(song.id, (song.chordProContent || '').replace(/\[[^\]]*\]/g, '').toLowerCase());
+    });
+    return index;
+  }, [songs]);
+
   const filteredSongs = useMemo(() => {
     const query = searchQuery.toLowerCase().trim();
+
+    /** How well a song matches the search: lower = shown earlier. */
+    const rankOf = (song: Song): number => {
+      if (!query) return 0;
+      const title = song.title.toLowerCase();
+      if (title === query) return 0; // title is exactly the search
+      if (title.startsWith(query)) return 1; // title starts with the search
+      if (title.includes(query)) return 2; // search appears in the title
+      if (
+        (song.artist || '').toLowerCase().includes(query) ||
+        (song.tags && song.tags.some((tag) => tag.toLowerCase().includes(query))) ||
+        (song.key || '').toLowerCase() === query
+      ) {
+        return 3; // artist / tag / key
+      }
+      return 4; // only in the lyrics or notes
+    };
+
+    const bySortOption = (a: Song, b: Song) => {
+      if (sortBy === 'title') return collator.compare(a.title, b.title);
+      if (sortBy === 'artist') return collator.compare(a.artist || '', b.artist || '');
+      if (sortBy === 'tempo') return (b.tempo || 0) - (a.tempo || 0);
+      if (sortBy === 'recent') return b.lastModified - a.lastModified;
+      return 0;
+    };
+
     return songs
       .filter((song) => {
         const matchesSearch =
@@ -292,6 +327,7 @@ export const SongList: React.FC<Props> = ({
           song.title.toLowerCase().includes(query) ||
           (song.artist || '').toLowerCase().includes(query) ||
           (song.chordProContent || '').toLowerCase().includes(query) ||
+          (lyricIndex.get(song.id) || '').includes(query) ||
           (song.tags && song.tags.some((tag) => tag.toLowerCase().includes(query))) ||
           (song.notes && song.notes.toLowerCase().includes(query)) ||
           (song.key || '').toLowerCase() === query;
@@ -299,14 +335,11 @@ export const SongList: React.FC<Props> = ({
         const matchesKey = selectedKey === 'all' || song.key === selectedKey;
         return matchesSearch && matchesKey;
       })
-      .sort((a, b) => {
-        if (sortBy === 'title') return collator.compare(a.title, b.title);
-        if (sortBy === 'artist') return collator.compare(a.artist || '', b.artist || '');
-        if (sortBy === 'tempo') return (b.tempo || 0) - (a.tempo || 0);
-        if (sortBy === 'recent') return b.lastModified - a.lastModified;
-        return 0;
-      });
-  }, [songs, searchQuery, selectedKey, sortBy]);
+      .map((song) => ({ song, rank: rankOf(song) }))
+      // While searching, better matches come first; the chosen sort order applies within each group
+      .sort((a, b) => a.rank - b.rank || bySortOption(a.song, b.song))
+      .map((entry) => entry.song);
+  }, [songs, searchQuery, selectedKey, sortBy, lyricIndex]);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;

@@ -1,5 +1,30 @@
-@import url('https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400&family=JetBrains+Mono:wght@400;500;600;700&family=Prompt:wght@500;600&family=Sarabun:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap');
 @import "tailwindcss";
+/* Fonts are bundled with the app (self-hosted via @fontsource) so they load offline and are precached by the service worker.
+   Only the Thai + Latin subsets are imported to keep the offline cache small. */
+@import '@fontsource/prompt/thai-500.css';
+@import '@fontsource/prompt/latin-500.css';
+@import '@fontsource/prompt/thai-600.css';
+@import '@fontsource/prompt/latin-600.css';
+@import '@fontsource/sarabun/thai-300.css';
+@import '@fontsource/sarabun/latin-300.css';
+@import '@fontsource/sarabun/thai-400.css';
+@import '@fontsource/sarabun/latin-400.css';
+@import '@fontsource/sarabun/thai-500.css';
+@import '@fontsource/sarabun/latin-500.css';
+@import '@fontsource/sarabun/thai-600.css';
+@import '@fontsource/sarabun/latin-600.css';
+@import '@fontsource/sarabun/thai-700.css';
+@import '@fontsource/sarabun/latin-700.css';
+@import '@fontsource/sarabun/thai-400-italic.css';
+@import '@fontsource/sarabun/latin-400-italic.css';
+@import '@fontsource/jetbrains-mono/latin-400.css';
+@import '@fontsource/jetbrains-mono/latin-500.css';
+@import '@fontsource/jetbrains-mono/latin-600.css';
+@import '@fontsource/jetbrains-mono/latin-700.css';
+@import '@fontsource/jetbrains-mono/latin-400-italic.css';
+@import '@fontsource/courier-prime/latin-400.css';
+@import '@fontsource/courier-prime/latin-700.css';
+@import '@fontsource/courier-prime/latin-400-italic.css';
 
 /* "Ink & signal" design: Prompt for headings and labels, Sarabun for text, JetBrains Mono for keys and BPM */
 @theme {

@@ -12,6 +12,10 @@
     "lint": "tsc --noEmit"
   },
   "dependencies": {
+    "@fontsource/courier-prime": "^5.0.0",
+    "@fontsource/jetbrains-mono": "^5.0.0",
+    "@fontsource/prompt": "^5.0.0",
+    "@fontsource/sarabun": "^5.0.0",
     "@google/genai": "^2.4.0",
     "@tailwindcss/vite": "^4.3.3",
     "@vitejs/plugin-react": "^6.1.1",

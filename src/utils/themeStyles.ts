@@ -1,8 +1,9 @@
 /**
- * Class names for the three themes of the "Ink & signal" design.
- *   stage-black -> Ink       warm black, cream text, bright yellow-orange signal (#F59E0B)
- *   dark        -> Graphite  cool charcoal, same bright yellow-orange signal
- *   light       -> Paper     warm paper, ink text, warm deep amber signal (#D97706, keeps 4.5:1 contrast on paper)
+ * Class names for the three themes. Each one has its own surface colour AND its own signal colour,
+ * so they are told apart at a glance, while all of them stay low-glare and clean:
+ *   stage-black -> Ink       warm near-black,   cream text,  amber signal      (#F59E0B)  - stage / dark rooms
+ *   dark        -> Midnight  deep navy,         ice text,    sky-blue signal   (#38BDF8)  - calm, cool
+ *   light       -> Paper     soft warm white,   ink text,    deep amber signal (#B45309)  - daylight / print-like
  * Every class is written out in full so Tailwind can see it.
  */
 export interface ThemeStyles {
@@ -106,121 +107,126 @@ const INK: ThemeStyles = {
   numberOff: 'bg-[#2C2924] text-[#F3EEE3]'
 };
 
-const GRAPHITE: ThemeStyles = {
+const MIDNIGHT: ThemeStyles = {
   name: 'dark',
   isLight: false,
-  signalHex: '#F59E0B',
+  signalHex: '#38BDF8',
 
-  page: 'bg-[#101418] text-[#E9EDF2]',
-  bar: 'bg-[#101418] border-[#29313A] text-[#E9EDF2]',
-  subBar: 'bg-[#101418] border-[#29313A]',
-  rail: 'bg-[#101418] border-[#29313A]',
-  dialog: 'bg-[#1A2027] border-[#29313A] text-[#E9EDF2]',
-  dialogBar: 'bg-[#151A20] border-[#29313A]',
-  card: 'bg-[#151A20] border-[#29313A]',
-  popover: 'bg-[#1A2027] border-[#38424D] text-[#E9EDF2] shadow-black/70',
-  popoverItem: 'hover:bg-[#232B34]',
-  popoverDivider: 'border-[#29313A]',
-  rowHover: 'hover:bg-[#1A2027]',
-  divide: 'divide-[#29313A]',
+  page: 'bg-[#0D1526] text-[#E8EEF8]',
+  bar: 'bg-[#0D1526] border-[#22304A] text-[#E8EEF8]',
+  subBar: 'bg-[#0D1526] border-[#22304A]',
+  rail: 'bg-[#0D1526] border-[#22304A]',
+  dialog: 'bg-[#16223B] border-[#2C3D5E] text-[#E8EEF8]',
+  dialogBar: 'bg-[#111B30] border-[#2C3D5E]',
+  card: 'bg-[#121C33] border-[#22304A]',
+  popover: 'bg-[#16223B] border-[#2C3D5E] text-[#E8EEF8] shadow-black/60',
+  popoverItem: 'hover:bg-[#1D2B48]',
+  popoverDivider: 'border-[#22304A]',
+  rowHover: 'hover:bg-[#16223B]',
+  divide: 'divide-[#22304A]',
 
-  textStrong: 'text-[#E9EDF2]',
-  textMuted: 'text-[#9BA5B2]',
-  accentText: 'text-[#F59E0B]',
+  textStrong: 'text-[#E8EEF8]',
+  textMuted: 'text-[#93A3BF]',
+  accentText: 'text-[#38BDF8]',
 
   field:
-    'bg-[#1A2027] border-[#38424D] text-[#E9EDF2] placeholder:text-[#9BA5B2] focus:border-[#F59E0B]',
-  ghostBtn: 'bg-transparent hover:bg-[#1A2027] text-[#E9EDF2] border-[#38424D]',
-  accentBtn: 'bg-[#F59E0B] hover:bg-[#FBBF24] text-[#101418] font-bold shadow-xs',
+    'bg-[#16223B] border-[#2C3D5E] text-[#E8EEF8] placeholder:text-[#93A3BF] focus:border-[#38BDF8]',
+  ghostBtn: 'bg-transparent hover:bg-[#16223B] text-[#E8EEF8] border-[#2C3D5E]',
+  accentBtn: 'bg-[#38BDF8] hover:bg-[#7DD3FC] text-[#06121F] font-bold shadow-xs',
   dangerBtn: 'bg-[#D6294A] hover:bg-[#E53A5A] text-white',
-  iconBtn: 'text-[#9BA5B2] hover:text-[#E9EDF2] hover:bg-[#232B34]',
-  iconBtnDanger: 'text-[#9BA5B2] hover:text-[#FF6B81] hover:bg-[#D6294A]/15',
-  segOn: 'bg-[#F59E0B] text-[#101418] border-[#F59E0B] font-bold',
-  segOff: 'bg-transparent text-[#E9EDF2] border-[#38424D] hover:border-[#5B6877]',
-  chip: 'bg-transparent text-[#E9EDF2] border-[#38424D] hover:border-[#5B6877]',
-  chipOn: 'bg-[#E9EDF2] text-[#101418] border-[#E9EDF2]',
-  railItem: 'text-[#9BA5B2] hover:text-[#E9EDF2] hover:bg-[#1A2027]',
-  railItemOn: 'bg-[#1A2027] text-[#E9EDF2]',
-  track: 'bg-[#29313A]',
-  accentColor: 'accent-[#F59E0B]',
-  focus: 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F59E0B]',
+  iconBtn: 'text-[#93A3BF] hover:text-[#E8EEF8] hover:bg-[#1D2B48]',
+  iconBtnDanger: 'text-[#93A3BF] hover:text-[#FF6B81] hover:bg-[#D6294A]/15',
+  segOn: 'bg-[#38BDF8] text-[#06121F] border-[#38BDF8] font-bold',
+  segOff: 'bg-transparent text-[#E8EEF8] border-[#2C3D5E] hover:border-[#4A5F88]',
+  chip: 'bg-transparent text-[#E8EEF8] border-[#2C3D5E] hover:border-[#4A5F88]',
+  chipOn: 'bg-[#E8EEF8] text-[#0D1526] border-[#E8EEF8]',
+  railItem: 'text-[#93A3BF] hover:text-[#E8EEF8] hover:bg-[#16223B]',
+  railItemOn: 'bg-[#16223B] text-[#E8EEF8]',
+  track: 'bg-[#22304A]',
+  accentColor: 'accent-[#38BDF8]',
+  focus: 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#38BDF8]',
   focusInset:
-    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#F59E0B]',
+    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#38BDF8]',
 
-  keyBadge: 'bg-[#E9EDF2] text-[#101418] border-transparent',
-  accentSoft: 'bg-[#F59E0B]/12 text-[#FBBF24] border-[#F59E0B]/35',
-  cardSelected: 'bg-[#1A2027] border-[#38424D]',
-  cardIdle: 'bg-transparent border-[#29313A] hover:bg-[#151A20] hover:border-[#38424D]',
-  numberOn: 'bg-[#F59E0B] text-[#101418] font-bold',
-  numberOff: 'bg-[#29313A] text-[#E9EDF2]'
+  keyBadge: 'bg-[#E8EEF8] text-[#0D1526] border-transparent',
+  accentSoft: 'bg-[#38BDF8]/12 text-[#7DD3FC] border-[#38BDF8]/35',
+  cardSelected: 'bg-[#16223B] border-[#2C3D5E]',
+  cardIdle: 'bg-transparent border-[#22304A] hover:bg-[#121C33] hover:border-[#2C3D5E]',
+  numberOn: 'bg-[#38BDF8] text-[#06121F] font-bold',
+  numberOff: 'bg-[#22304A] text-[#E8EEF8]'
 };
 
 const PAPER: ThemeStyles = {
   name: 'light',
   isLight: true,
-  signalHex: '#D97706',
+  signalHex: '#B45309',
 
-  page: 'bg-[#F6F1E7] text-[#1A1815]',
-  bar: 'bg-[#F6F1E7] border-[#DDD4C2] text-[#1A1815]',
-  subBar: 'bg-[#F6F1E7] border-[#DDD4C2]',
-  rail: 'bg-[#F6F1E7] border-[#DDD4C2]',
-  dialog: 'bg-[#FBF8F1] border-[#DDD4C2] text-[#1A1815]',
-  dialogBar: 'bg-[#EFE8DA] border-[#DDD4C2]',
-  card: 'bg-[#EFE8DA] border-[#DDD4C2]',
-  popover: 'bg-[#FBF8F1] border-[#CFC5B0] text-[#1A1815] shadow-[#1A1815]/15',
-  popoverItem: 'hover:bg-[#EFE8DA]',
-  popoverDivider: 'border-[#DDD4C2]',
-  rowHover: 'hover:bg-[#EFE8DA]',
-  divide: 'divide-[#DDD4C2]',
+  page: 'bg-[#F8F6F1] text-[#1F1C17]',
+  bar: 'bg-[#F8F6F1] border-[#E6E0D4] text-[#1F1C17]',
+  subBar: 'bg-[#F8F6F1] border-[#E6E0D4]',
+  rail: 'bg-[#F8F6F1] border-[#E6E0D4]',
+  dialog: 'bg-[#FFFFFF] border-[#E6E0D4] text-[#1F1C17]',
+  dialogBar: 'bg-[#F3EFE6] border-[#E6E0D4]',
+  card: 'bg-[#FFFFFF] border-[#E6E0D4]',
+  popover: 'bg-[#FFFFFF] border-[#DAD3C4] text-[#1F1C17] shadow-[#1F1C17]/15',
+  popoverItem: 'hover:bg-[#F0ECE2]',
+  popoverDivider: 'border-[#E6E0D4]',
+  rowHover: 'hover:bg-[#F0ECE2]',
+  divide: 'divide-[#E6E0D4]',
 
-  textStrong: 'text-[#1A1815]',
-  textMuted: 'text-[#6B6558]',
-  accentText: 'text-[#D97706]',
+  textStrong: 'text-[#1F1C17]',
+  textMuted: 'text-[#6A6458]',
+  accentText: 'text-[#B45309]',
 
   field:
-    'bg-[#FBF8F1] border-[#CFC5B0] text-[#1A1815] placeholder:text-[#6B6558] focus:border-[#D97706]',
-  ghostBtn: 'bg-transparent hover:bg-[#EFE8DA] text-[#1A1815] border-[#CFC5B0]',
-  accentBtn: 'bg-[#D97706] hover:bg-[#B45309] text-white font-bold shadow-xs',
+    'bg-[#FFFFFF] border-[#D8D1C2] text-[#1F1C17] placeholder:text-[#6A6458] focus:border-[#B45309]',
+  ghostBtn: 'bg-transparent hover:bg-[#F0ECE2] text-[#1F1C17] border-[#D8D1C2]',
+  accentBtn: 'bg-[#B45309] hover:bg-[#92400E] text-white font-bold shadow-xs',
   dangerBtn: 'bg-[#B3203E] hover:bg-[#9A1A35] text-white',
-  iconBtn: 'text-[#6B6558] hover:text-[#1A1815] hover:bg-[#E5DCC9]',
-  iconBtnDanger: 'text-[#6B6558] hover:text-[#B3203E] hover:bg-[#B3203E]/10',
-  segOn: 'bg-[#D97706] text-white border-[#D97706] font-bold',
-  segOff: 'bg-transparent text-[#1A1815] border-[#CFC5B0] hover:border-[#A89F8B]',
-  chip: 'bg-transparent text-[#1A1815] border-[#CFC5B0] hover:border-[#A89F8B]',
-  chipOn: 'bg-[#1A1815] text-[#F6F1E7] border-[#1A1815]',
-  railItem: 'text-[#6B6558] hover:text-[#1A1815] hover:bg-[#EFE8DA]',
-  railItemOn: 'bg-[#E5DCC9] text-[#1A1815]',
-  track: 'bg-[#DDD4C2]',
-  accentColor: 'accent-[#D97706]',
-  focus: 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D97706]',
+  iconBtn: 'text-[#6A6458] hover:text-[#1F1C17] hover:bg-[#EDE8DC]',
+  iconBtnDanger: 'text-[#6A6458] hover:text-[#B3203E] hover:bg-[#B3203E]/10',
+  segOn: 'bg-[#B45309] text-white border-[#B45309] font-bold',
+  segOff: 'bg-transparent text-[#1F1C17] border-[#D8D1C2] hover:border-[#B5AC98]',
+  chip: 'bg-transparent text-[#1F1C17] border-[#D8D1C2] hover:border-[#B5AC98]',
+  chipOn: 'bg-[#1F1C17] text-[#F8F6F1] border-[#1F1C17]',
+  railItem: 'text-[#6A6458] hover:text-[#1F1C17] hover:bg-[#F0ECE2]',
+  railItemOn: 'bg-[#EDE8DC] text-[#1F1C17]',
+  track: 'bg-[#E6E0D4]',
+  accentColor: 'accent-[#B45309]',
+  focus: 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B45309]',
   focusInset:
-    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#D97706]',
+    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#B45309]',
 
-  keyBadge: 'bg-[#1A1815] text-[#F6F1E7] border-transparent',
-  accentSoft: 'bg-[#D97706]/10 text-[#B45309] border-[#D97706]/30',
-  cardSelected: 'bg-[#FBF8F1] border-[#CFC5B0]',
-  cardIdle: 'bg-transparent border-[#DDD4C2] hover:bg-[#EFE8DA] hover:border-[#CFC5B0]',
-  numberOn: 'bg-[#D97706] text-white font-bold',
-  numberOff: 'bg-[#E5DCC9] text-[#1A1815]'
+  keyBadge: 'bg-[#1F1C17] text-[#F8F6F1] border-transparent',
+  accentSoft: 'bg-[#B45309]/10 text-[#92400E] border-[#B45309]/30',
+  cardSelected: 'bg-[#FFFFFF] border-[#D8D1C2] shadow-xs',
+  cardIdle: 'bg-transparent border-[#E6E0D4] hover:bg-[#F0ECE2] hover:border-[#D8D1C2]',
+  numberOn: 'bg-[#B45309] text-white font-bold',
+  numberOff: 'bg-[#EDE8DC] text-[#1F1C17]'
 };
 
-/** Only an explicit "stage-black" or "light" differs from Graphite, as in the original screens. */
+/** Only an explicit "stage-black" or "light" differs from Midnight (the "dark" value). */
 export function getThemeStyles(theme?: string): ThemeStyles {
   if (theme === 'light') return PAPER;
   if (theme === 'stage-black') return INK;
-  return GRAPHITE;
+  return MIDNIGHT;
 }
 
-export const SIGNAL_ON_DARK = '#F59E0B';
-export const SIGNAL_ON_LIGHT = '#D97706';
+export const SIGNAL_ON_DARK = '#F59E0B'; // Ink
+export const SIGNAL_ON_MIDNIGHT = '#38BDF8';
+export const SIGNAL_ON_LIGHT = '#B45309'; // Paper (deep enough to keep 5:1 contrast on paper)
+
+// Chord colours that are just "a theme's default", as opposed to one the user picked on purpose
+const THEME_DEFAULT_SIGNALS = ['#f59e0b', '#d97706', '#b45309', '#38bdf8', '#1d4ed8', '#ff5b3a', '#c42e14', '#e8421f'];
 
 /**
- * Chord colour to use when the theme changes: switching to Paper always takes the deeper signal
- * (the bright yellow-orange is too light on paper); switching to a dark theme replaces only the light-theme
- * defaults, so a colour the user picked on purpose is kept.
+ * Chord colour to use when the theme changes: switching to Paper always takes its deep signal (bright colours
+ * are too light on paper); switching to Ink or Midnight replaces only another theme's default signal, so a
+ * colour the user picked on purpose is kept.
  */
 export function chordColorForTheme(theme: 'stage-black' | 'dark' | 'light', current?: string): string {
   if (theme === 'light') return SIGNAL_ON_LIGHT;
-  if (!current || current === SIGNAL_ON_LIGHT || current === '#1d4ed8' || current === '#FF5B3A' || current === '#C42E14') return SIGNAL_ON_DARK;
+  const target = theme === 'dark' ? SIGNAL_ON_MIDNIGHT : SIGNAL_ON_DARK;
+  if (!current || THEME_DEFAULT_SIGNALS.includes(current.toLowerCase())) return target;
   return current;
 }

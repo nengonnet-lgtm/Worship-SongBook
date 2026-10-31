@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { KEYS, getSemitonesBetweenKeys, transposeNote } from '../utils/chordUtils';
+import { getThemeStyles } from '../utils/themeStyles';
 import {
   ChevronLeft,
   ChevronRight,
@@ -17,6 +18,7 @@ interface Props {
   onToggleCollapse: () => void;
   onInsertChord: (chord: string) => void;
   usedChords: string[];
+  theme?: string;
 }
 
 export const ChordHelperSidebar: React.FC<Props> = ({
@@ -24,8 +26,10 @@ export const ChordHelperSidebar: React.FC<Props> = ({
   isCollapsed,
   onToggleCollapse,
   onInsertChord,
-  usedChords
+  usedChords,
+  theme
 }) => {
+  const t = getThemeStyles(theme);
   const [activeTab, setActiveTab] = useState<'key' | 'custom' | 'symbols'>('key');
   const [selectedRoot, setSelectedRoot] = useState('C');
   const [selectedQuality, setSelectedQuality] = useState('');
@@ -96,25 +100,32 @@ export const ChordHelperSidebar: React.FC<Props> = ({
   // กรณีแถบคอร์ดถูกยุบ (Collapsed Mode)
   if (isCollapsed) {
     return (
-      <div className="w-11 shrink-0 bg-neutral-950 border-r border-neutral-800 flex flex-col items-center py-2.5 gap-2 select-none z-10 transition-all duration-200">
+      <div className={`w-11 shrink-0 border-r flex flex-col items-center py-2.5 gap-2 select-none z-10 transition-all duration-200 ${t.dialog}`}>
         <button
           type="button"
           onClick={onToggleCollapse}
-          className="p-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-amber-400 border border-neutral-700 cursor-pointer transition-colors shadow-xs"
+          className={`p-1.5 rounded-lg cursor-pointer transition-colors shadow-xs ${t.ghostBtn}`}
           title="ขยายแถบตัวช่วยแทรกคอร์ด (Expand Chord Sidebar)"
         >
           <ChevronRight className="w-4 h-4" />
         </button>
 
         {/* ป้ายแสดงคีย์ย่อ */}
-        <div className="w-7 h-7 rounded-md bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-[11px] font-bold text-amber-400">
+        <div
+          className="w-7 h-7 rounded-md flex items-center justify-center text-[11px] font-bold"
+          style={{
+            backgroundColor: `${t.signalHex}22`,
+            border: `1px solid ${t.signalHex}55`,
+            color: t.signalHex
+          }}
+        >
           {currentKey}
         </div>
 
         {/* ข้อความแนวตั้ง */}
         <div
           onClick={onToggleCollapse}
-          className="my-1 cursor-pointer py-2 text-[10px] font-bold text-neutral-400 hover:text-amber-300 tracking-wider transition-colors"
+          className={`my-1 cursor-pointer py-2 text-[10px] font-bold tracking-wider transition-colors ${t.textMuted} hover:opacity-100`}
           style={{ writingMode: 'vertical-rl', textOrientation: 'mixed' }}
         >
           คอร์ดด่วน
@@ -127,7 +138,7 @@ export const ChordHelperSidebar: React.FC<Props> = ({
               key={item.chord}
               type="button"
               onClick={() => onInsertChord(item.chord)}
-              className="w-full py-1 text-[10px] font-bold rounded bg-neutral-900 hover:bg-amber-500 hover:text-neutral-950 text-neutral-200 border border-neutral-800 transition-colors cursor-pointer text-center truncate"
+              className={`w-full py-1 text-[10px] font-bold rounded border transition-colors cursor-pointer text-center truncate ${t.ghostBtn}`}
               title={`แทรก [${item.chord}] (${item.degree})`}
             >
               {item.chord}
@@ -140,7 +151,12 @@ export const ChordHelperSidebar: React.FC<Props> = ({
               key={chord}
               type="button"
               onClick={() => onInsertChord(chord)}
-              className="w-full py-1 text-[10px] font-bold rounded bg-sky-950/40 hover:bg-sky-500 hover:text-neutral-950 text-sky-300 border border-sky-800/40 transition-colors cursor-pointer text-center truncate"
+              className="w-full py-1 text-[10px] font-bold rounded border transition-colors cursor-pointer text-center truncate"
+              style={{
+                backgroundColor: `${t.signalHex}18`,
+                borderColor: `${t.signalHex}44`,
+                color: t.signalHex
+              }}
               title={`แทรก [${chord}]`}
             >
               {chord}
@@ -153,17 +169,29 @@ export const ChordHelperSidebar: React.FC<Props> = ({
 
   // กรณีแถบคอร์ดเปิดอยู่ (Expanded Mode)
   return (
-    <div className="w-60 sm:w-64 shrink-0 bg-neutral-950/90 border-r border-neutral-800 flex flex-col h-full overflow-hidden select-none z-10 transition-all duration-200">
+    <div className={`w-60 sm:w-64 shrink-0 border-r flex flex-col h-full overflow-hidden select-none z-10 transition-all duration-200 ${t.dialog}`}>
       {/* 1. Header Bar */}
-      <div className="px-3 py-2 border-b border-neutral-800 bg-neutral-900/80 flex items-center justify-between shrink-0">
+      <div className={`px-3 py-2 border-b flex items-center justify-between shrink-0 ${t.dialogBar}`}>
         <div className="flex items-center gap-2 min-w-0">
-          <div className="w-5 h-5 rounded bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0">
+          <div
+            className="w-5 h-5 rounded flex items-center justify-center shrink-0"
+            style={{
+              backgroundColor: `${t.signalHex}22`,
+              color: t.signalHex
+            }}
+          >
             <Music className="w-3.5 h-3.5" />
           </div>
-          <span className="font-bold text-xs text-neutral-100 truncate">
+          <span className={`font-bold text-xs truncate ${t.textStrong}`}>
             ตัวช่วยแทรกคอร์ด
           </span>
-          <span className="px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-400 text-[10px] font-bold font-mono">
+          <span
+            className="px-1.5 py-0.2 rounded text-[10px] font-bold font-mono"
+            style={{
+              backgroundColor: `${t.signalHex}22`,
+              color: t.signalHex
+            }}
+          >
             {currentKey}
           </span>
         </div>
@@ -171,7 +199,7 @@ export const ChordHelperSidebar: React.FC<Props> = ({
         <button
           type="button"
           onClick={onToggleCollapse}
-          className="p-1 rounded-md text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800 cursor-pointer transition-colors"
+          className={`p-1 rounded-md cursor-pointer transition-colors ${t.iconBtn}`}
           title="ยุบแถบคอร์ด (Collapse Sidebar)"
         >
           <ChevronLeft className="w-4 h-4" />
@@ -179,14 +207,14 @@ export const ChordHelperSidebar: React.FC<Props> = ({
       </div>
 
       {/* 2. Sub Tabs */}
-      <div className="flex items-center p-1 border-b border-neutral-800/80 bg-neutral-950 text-[11px] font-medium shrink-0 gap-1">
+      <div className={`flex items-center p-1 border-b text-[11px] font-medium shrink-0 gap-1 ${t.dialogBar}`}>
         <button
           type="button"
           onClick={() => setActiveTab('key')}
-          className={`flex-1 py-1 rounded text-center transition-colors cursor-pointer ${
+          className={`flex-1 py-1 rounded text-center transition-colors cursor-pointer border ${
             activeTab === 'key'
-              ? 'bg-neutral-800 text-amber-400 font-bold shadow-xs'
-              : 'text-neutral-400 hover:text-neutral-200'
+              ? t.segOn
+              : t.segOff
           }`}
         >
           คีย์ {currentKey}
@@ -194,10 +222,10 @@ export const ChordHelperSidebar: React.FC<Props> = ({
         <button
           type="button"
           onClick={() => setActiveTab('custom')}
-          className={`flex-1 py-1 rounded text-center transition-colors cursor-pointer ${
+          className={`flex-1 py-1 rounded text-center transition-colors cursor-pointer border ${
             activeTab === 'custom'
-              ? 'bg-neutral-800 text-amber-400 font-bold shadow-xs'
-              : 'text-neutral-400 hover:text-neutral-200'
+              ? t.segOn
+              : t.segOff
           }`}
         >
           สร้างคอร์ด
@@ -205,10 +233,10 @@ export const ChordHelperSidebar: React.FC<Props> = ({
         <button
           type="button"
           onClick={() => setActiveTab('symbols')}
-          className={`flex-1 py-1 rounded text-center transition-colors cursor-pointer ${
+          className={`flex-1 py-1 rounded text-center transition-colors cursor-pointer border ${
             activeTab === 'symbols'
-              ? 'bg-neutral-800 text-amber-400 font-bold shadow-xs'
-              : 'text-neutral-400 hover:text-neutral-200'
+              ? t.segOn
+              : t.segOff
           }`}
         >
           สัญลักษณ์
@@ -221,7 +249,10 @@ export const ChordHelperSidebar: React.FC<Props> = ({
         {usedChords.length > 0 && (
           <div>
             <div className="flex items-center justify-between mb-1.5">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-sky-400 flex items-center gap-1">
+              <span
+                className="text-[10px] font-bold uppercase tracking-wider flex items-center gap-1"
+                style={{ color: t.signalHex }}
+              >
                 <Sparkles className="w-2.5 h-2.5" />
                 ใช้ในเพลงนี้ ({usedChords.length})
               </span>
@@ -232,7 +263,12 @@ export const ChordHelperSidebar: React.FC<Props> = ({
                   key={chord}
                   type="button"
                   onClick={() => onInsertChord(chord)}
-                  className="px-1 py-1 text-xs font-bold font-mono rounded bg-sky-950/40 hover:bg-sky-500 hover:text-neutral-950 text-sky-300 border border-sky-800/40 transition-colors cursor-pointer truncate text-center shadow-xs"
+                  className="px-1 py-1 text-xs font-bold font-mono rounded border transition-colors cursor-pointer truncate text-center shadow-xs"
+                  style={{
+                    backgroundColor: `${t.signalHex}18`,
+                    borderColor: `${t.signalHex}44`,
+                    color: t.signalHex
+                  }}
                   title={`แทรก [${chord}]`}
                 >
                   {chord}
@@ -247,7 +283,10 @@ export const ChordHelperSidebar: React.FC<Props> = ({
           <div className="space-y-3">
             {/* คอร์ดหลักในคีย์ (I, IV, V, vi) */}
             <div>
-              <span className="block text-[10px] font-bold uppercase tracking-wider text-amber-400 mb-1.5">
+              <span
+                className="block text-[10px] font-bold uppercase tracking-wider mb-1.5"
+                style={{ color: t.signalHex }}
+              >
                 คอร์ดหลัก (Primary Chords)
               </span>
               <div className="grid grid-cols-2 gap-1.5">
@@ -256,12 +295,15 @@ export const ChordHelperSidebar: React.FC<Props> = ({
                     key={item.chord}
                     type="button"
                     onClick={() => onInsertChord(item.chord)}
-                    className="p-1.5 rounded-lg bg-neutral-900 hover:bg-amber-500 hover:text-neutral-950 text-neutral-100 border border-neutral-700/80 transition-all cursor-pointer group flex flex-col items-center justify-center shadow-xs"
+                    className={`p-1.5 rounded-lg border transition-all cursor-pointer group flex flex-col items-center justify-center shadow-xs ${t.ghostBtn}`}
                   >
-                    <span className="font-bold text-sm font-mono tracking-tight group-hover:scale-105 transition-transform">
+                    <span
+                      className="font-bold text-sm font-mono tracking-tight group-hover:scale-105 transition-transform"
+                      style={{ color: t.signalHex }}
+                    >
                       {item.chord}
                     </span>
-                    <span className="text-[9px] font-mono text-neutral-400 group-hover:text-neutral-900/80">
+                    <span className={`text-[9px] font-mono ${t.textMuted}`}>
                       ท่อนหลัก ({item.degree})
                     </span>
                   </button>
@@ -271,7 +313,7 @@ export const ChordHelperSidebar: React.FC<Props> = ({
 
             {/* คอร์ดรองในคีย์ (ii, iii, vii°) */}
             <div>
-              <span className="block text-[10px] font-bold uppercase tracking-wider text-neutral-400 mb-1.5">
+              <span className={`block text-[10px] font-bold uppercase tracking-wider mb-1.5 ${t.textMuted}`}>
                 คอร์ดรอง (Secondary Chords)
               </span>
               <div className="grid grid-cols-3 gap-1">
@@ -280,7 +322,7 @@ export const ChordHelperSidebar: React.FC<Props> = ({
                     key={item.chord}
                     type="button"
                     onClick={() => onInsertChord(item.chord)}
-                    className="py-1 px-1 rounded bg-neutral-900 hover:bg-neutral-800 text-neutral-200 hover:text-amber-400 border border-neutral-800 text-xs font-mono font-semibold transition-colors cursor-pointer text-center"
+                    className={`py-1 px-1 rounded border text-xs font-mono font-semibold transition-colors cursor-pointer text-center ${t.ghostBtn}`}
                     title={`${item.degree}`}
                   >
                     {item.chord}
@@ -291,7 +333,7 @@ export const ChordHelperSidebar: React.FC<Props> = ({
 
             {/* คอร์ดเบสยอดนิยม (Slash Chords) */}
             <div>
-              <span className="block text-[10px] font-bold uppercase tracking-wider text-indigo-400 mb-1.5">
+              <span className={`block text-[10px] font-bold uppercase tracking-wider mb-1.5 ${t.textMuted}`}>
                 คอร์ดเบส (Slash Chords)
               </span>
               <div className="grid grid-cols-2 gap-1">
@@ -300,7 +342,7 @@ export const ChordHelperSidebar: React.FC<Props> = ({
                     key={item.chord}
                     type="button"
                     onClick={() => onInsertChord(item.chord)}
-                    className="py-1 px-1.5 rounded bg-indigo-950/30 hover:bg-indigo-500 hover:text-neutral-950 text-indigo-300 border border-indigo-800/40 text-xs font-mono font-semibold transition-colors cursor-pointer text-center truncate"
+                    className={`py-1 px-1.5 rounded border text-xs font-mono font-semibold transition-colors cursor-pointer text-center truncate ${t.ghostBtn}`}
                     title={`คอร์ดส่ง ${item.label}`}
                   >
                     {item.chord}
@@ -311,7 +353,7 @@ export const ChordHelperSidebar: React.FC<Props> = ({
 
             {/* คอร์ดขยายยอดนิยม (Worship Extensions: sus4, add9, 7) */}
             <div>
-              <span className="block text-[10px] font-bold uppercase tracking-wider text-neutral-400 mb-1.5">
+              <span className={`block text-[10px] font-bold uppercase tracking-wider mb-1.5 ${t.textMuted}`}>
                 คอร์ดสีสัน (Extensions: sus4, add9, 7)
               </span>
               <div className="grid grid-cols-3 gap-1">
@@ -320,7 +362,7 @@ export const ChordHelperSidebar: React.FC<Props> = ({
                     key={chord}
                     type="button"
                     onClick={() => onInsertChord(chord)}
-                    className="py-1 px-1 rounded bg-neutral-900 hover:bg-neutral-800 text-neutral-300 hover:text-sky-300 border border-neutral-800/80 text-[11px] font-mono font-medium transition-colors cursor-pointer text-center truncate"
+                    className={`py-1 px-1 rounded border text-[11px] font-mono font-medium transition-colors cursor-pointer text-center truncate ${t.ghostBtn}`}
                   >
                     {chord}
                   </button>
@@ -335,7 +377,7 @@ export const ChordHelperSidebar: React.FC<Props> = ({
           <div className="space-y-3">
             {/* โน้ตตัวต้น (Root Note) */}
             <div>
-              <span className="block text-[10px] font-bold uppercase tracking-wider text-neutral-400 mb-1">
+              <span className={`block text-[10px] font-bold uppercase tracking-wider mb-1 ${t.textMuted}`}>
                 1. ตัวโน้ตหลัก (Root)
               </span>
               <div className="grid grid-cols-4 gap-1">
@@ -344,10 +386,10 @@ export const ChordHelperSidebar: React.FC<Props> = ({
                     key={n}
                     type="button"
                     onClick={() => setSelectedRoot(n)}
-                    className={`py-1 text-xs font-bold font-mono rounded transition-colors cursor-pointer ${
+                    className={`py-1 text-xs font-bold font-mono rounded border transition-colors cursor-pointer ${
                       selectedRoot === n
-                        ? 'bg-amber-500 text-neutral-950 shadow-xs'
-                        : 'bg-neutral-900 hover:bg-neutral-800 text-neutral-300 border border-neutral-800'
+                        ? t.segOn
+                        : t.segOff
                     }`}
                   >
                     {n}
@@ -358,7 +400,7 @@ export const ChordHelperSidebar: React.FC<Props> = ({
 
             {/* ชนิดคอร์ด (Quality) */}
             <div>
-              <span className="block text-[10px] font-bold uppercase tracking-wider text-neutral-400 mb-1">
+              <span className={`block text-[10px] font-bold uppercase tracking-wider mb-1 ${t.textMuted}`}>
                 2. ประเภทคอร์ด (Quality)
               </span>
               <div className="grid grid-cols-3 gap-1">
@@ -380,10 +422,10 @@ export const ChordHelperSidebar: React.FC<Props> = ({
                     key={q.label}
                     type="button"
                     onClick={() => setSelectedQuality(q.val)}
-                    className={`py-1 text-[11px] font-mono rounded transition-colors cursor-pointer ${
+                    className={`py-1 text-[11px] font-mono rounded border transition-colors cursor-pointer ${
                       selectedQuality === q.val
-                        ? 'bg-sky-500 text-neutral-950 font-bold shadow-xs'
-                        : 'bg-neutral-900 hover:bg-neutral-800 text-neutral-300 border border-neutral-800'
+                        ? t.segOn
+                        : t.segOff
                     }`}
                   >
                     {q.label}
@@ -395,14 +437,14 @@ export const ChordHelperSidebar: React.FC<Props> = ({
             {/* โน้ตเบส (Bass Note) */}
             <div>
               <div className="flex items-center justify-between mb-1">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400">
+                <span className={`text-[10px] font-bold uppercase tracking-wider ${t.textMuted}`}>
                   3. โน้ตเบส (/Bass - เสริม)
                 </span>
                 {selectedBass && (
                   <button
                     type="button"
                     onClick={() => setSelectedBass('')}
-                    className="text-[9px] text-neutral-500 hover:text-neutral-300 cursor-pointer"
+                    className={`text-[9px] cursor-pointer ${t.textMuted} hover:opacity-100`}
                   >
                     ลบเบส
                   </button>
@@ -414,10 +456,10 @@ export const ChordHelperSidebar: React.FC<Props> = ({
                     key={b || 'none'}
                     type="button"
                     onClick={() => setSelectedBass(b)}
-                    className={`py-1 text-xs font-mono rounded transition-colors cursor-pointer ${
+                    className={`py-1 text-xs font-mono rounded border transition-colors cursor-pointer ${
                       selectedBass === b
-                        ? 'bg-indigo-500 text-neutral-950 font-bold shadow-xs'
-                        : 'bg-neutral-900 hover:bg-neutral-800 text-neutral-300 border border-neutral-800'
+                        ? t.segOn
+                        : t.segOff
                     }`}
                   >
                     {b ? `/${b}` : 'ไม่มี'}
@@ -427,11 +469,11 @@ export const ChordHelperSidebar: React.FC<Props> = ({
             </div>
 
             {/* ปุ่มแทรกคอร์ดที่สร้างขึ้น */}
-            <div className="pt-2 border-t border-neutral-800">
+            <div className={`pt-2 border-t ${t.popoverDivider}`}>
               <button
                 type="button"
                 onClick={() => onInsertChord(customChord)}
-                className="w-full py-2 px-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-neutral-950 font-bold text-xs flex items-center justify-center gap-1.5 shadow-md cursor-pointer transition-colors"
+                className={`w-full py-2 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 shadow-md cursor-pointer transition-colors ${t.accentBtn}`}
               >
                 <Plus className="w-4 h-4" />
                 <span>แทรกคอร์ด [{customChord}]</span>
@@ -444,7 +486,7 @@ export const ChordHelperSidebar: React.FC<Props> = ({
         {activeTab === 'symbols' && (
           <div className="space-y-3">
             <div>
-              <span className="block text-[10px] font-bold uppercase tracking-wider text-neutral-400 mb-1.5">
+              <span className={`block text-[10px] font-bold uppercase tracking-wider mb-1.5 ${t.textMuted}`}>
                 รอบการเล่น / ห้องเพลง
               </span>
               <div className="grid grid-cols-2 gap-1.5">
@@ -453,7 +495,7 @@ export const ChordHelperSidebar: React.FC<Props> = ({
                     key={sym}
                     type="button"
                     onClick={() => onInsertChord(` ${sym} `)}
-                    className="py-1.5 px-2 rounded bg-neutral-900 hover:bg-neutral-800 text-neutral-200 border border-neutral-800 text-xs font-mono transition-colors cursor-pointer text-center"
+                    className={`py-1.5 px-2 rounded border text-xs font-mono transition-colors cursor-pointer text-center ${t.ghostBtn}`}
                   >
                     {sym}
                   </button>
@@ -462,7 +504,7 @@ export const ChordHelperSidebar: React.FC<Props> = ({
             </div>
 
             <div>
-              <span className="block text-[10px] font-bold uppercase tracking-wider text-neutral-400 mb-1.5">
+              <span className={`block text-[10px] font-bold uppercase tracking-wider mb-1.5 ${t.textMuted}`}>
                 หัวข้อท่อนเพลง (ChordPro Directives)
               </span>
               <div className="space-y-1">
@@ -480,10 +522,10 @@ export const ChordHelperSidebar: React.FC<Props> = ({
                     key={dir}
                     type="button"
                     onClick={() => onInsertChord(`\n${dir}\n`)}
-                    className="w-full py-1 px-2.5 rounded bg-neutral-900 hover:bg-neutral-800 text-sky-400 border border-neutral-800 text-xs font-mono text-left transition-colors cursor-pointer flex items-center justify-between"
+                    className={`w-full py-1 px-2.5 rounded border text-xs font-mono text-left transition-colors cursor-pointer flex items-center justify-between ${t.ghostBtn}`}
                   >
-                    <span>{dir}</span>
-                    <span className="text-[10px] text-neutral-500">แทรก</span>
+                    <span style={{ color: t.signalHex }}>{dir}</span>
+                    <span className={`text-[10px] ${t.textMuted}`}>แทรก</span>
                   </button>
                 ))}
               </div>
@@ -493,7 +535,7 @@ export const ChordHelperSidebar: React.FC<Props> = ({
       </div>
 
       {/* 4. Footer Help Tip */}
-      <div className="p-2 border-t border-neutral-800/80 bg-neutral-950/80 text-[10px] text-neutral-500 text-center shrink-0">
+      <div className={`p-2 border-t text-[10px] ${t.textMuted} text-center shrink-0 ${t.dialogBar}`}>
         คลิกที่คอร์ดเพื่อแทรกตรงตำแหน่งเคอร์เซอร์
       </div>
     </div>

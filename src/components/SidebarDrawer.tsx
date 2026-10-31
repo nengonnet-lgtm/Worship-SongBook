@@ -6,13 +6,14 @@ import {
   Settings as SettingsIcon,
   X,
   Volume2,
-  RefreshCw
+  RefreshCw,
+  Keyboard
 } from 'lucide-react';
 import { AppSettings, InstrumentType } from '../types/song';
 import { PWAInstallButton } from './PWAInstallButton';
 import { RadioGroup, tabIndexFor } from './RadioGroup';
 import { useDialogBehavior } from '../utils/useDialog';
-import { chordColorForTheme } from '../utils/themeStyles';
+import { chordColorForTheme, getThemeStyles } from '../utils/themeStyles';
 
 interface Props {
   isOpen: boolean;
@@ -24,26 +25,38 @@ interface Props {
   onOpenChords: () => void;
   onOpenMetronome: () => void;
   onOpenSettings?: () => void;
+  onOpenShortcuts?: () => void;
   onUpdateSongs?: () => void;
   settings: AppSettings;
   onUpdateSettings: (settings: Partial<AppSettings>) => void;
 }
 
-const focusRing =
-  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F59E0B]';
-
-// Main navigation rows (phone drawer; tablets use the NavRail)
-const navBase = `w-full flex items-center justify-between px-3.5 h-12 rounded-xl border transition-colors motion-reduce:transition-none cursor-pointer ${focusRing}`;
-const navActive = 'bg-[#F59E0B] text-[#0F0E0C] font-bold shadow-sm border-[#F59E0B]';
-const navIdle = 'text-[#F3EEE3] hover:bg-[#262320] border-[#3A362F]';
-
-const toolRow = `w-full flex items-center gap-3 px-3.5 h-11 rounded-xl text-[#F3EEE3] hover:bg-[#262320] transition-colors motion-reduce:transition-none cursor-pointer ${focusRing}`;
-
-const optionBase = `h-10 px-2 rounded-lg border text-xs font-semibold transition-colors motion-reduce:transition-none cursor-pointer ${focusRing}`;
-const optionIdle =
-  'bg-transparent border-[#3A362F] text-[#A8A092] hover:text-[#F3EEE3] hover:border-[#6B655A]';
-
 const INSTRUMENTS: InstrumentType[] = ['guitar', 'ukulele', 'piano'];
+
+// Theme buttons always show the look of the theme they select, so the choice is recognisable at a glance
+const THEME_OPTIONS = [
+  {
+    value: 'stage-black',
+    label: 'Ink',
+    title: 'Ink: warm black stage background, cream text, amber chords',
+    on: 'bg-[#0F0E0C] border-[#F59E0B] text-[#F3EEE3] font-bold shadow-sm',
+    off: 'bg-[#0F0E0C] border-[#3A362F] text-[#A8A092] hover:border-[#6B655A]'
+  },
+  {
+    value: 'dark',
+    label: 'Midnight',
+    title: 'Midnight: deep navy background, ice-white text, sky-blue chords',
+    on: 'bg-[#0D1526] border-[#38BDF8] text-[#E8EEF8] font-bold shadow-sm',
+    off: 'bg-[#0D1526] border-[#2C3D5E] text-[#93A3BF] hover:border-[#4A5F88]'
+  },
+  {
+    value: 'light',
+    label: 'Paper',
+    title: 'Paper: soft warm-white background, ink text, deep amber chords',
+    on: 'bg-[#F8F6F1] border-[#B45309] text-[#1F1C17] font-bold shadow-sm',
+    off: 'bg-[#F8F6F1] border-[#D8D1C2] text-[#6A6458] hover:border-[#B5AC98]'
+  }
+] as const;
 
 export const SidebarDrawer: React.FC<Props> = (props) =>
   props.isOpen ? <DrawerPanel {...props} /> : null;
@@ -57,44 +70,27 @@ const DrawerPanel: React.FC<Props> = ({
   onOpenChords,
   onOpenMetronome,
   onOpenSettings,
+  onOpenShortcuts,
   onUpdateSongs,
   settings,
   onUpdateSettings
 }) => {
+  const t = getThemeStyles(settings.theme);
   const panelRef = useRef<HTMLDivElement>(null);
   useDialogBehavior(panelRef, onClose);
 
-  const themeOptions = [
-    {
-      value: 'stage-black',
-      label: 'Ink',
-      title: 'Ink: warm black stage background, cream text, bright yellow-orange chords',
-      on: 'bg-[#0F0E0C] border-[#F59E0B] text-[#F3EEE3] font-bold shadow-sm',
-      onPatch: () => ({
-        theme: 'stage-black' as const,
-        chordsColor: chordColorForTheme('stage-black', settings.chordsColor)
-      })
-    },
-    {
-      value: 'dark',
-      label: 'Graphite',
-      title: 'Graphite: cool charcoal background with golden amber chords',
-      on: 'bg-[#101418] border-[#F59E0B] text-[#E9EDF2] font-bold shadow-sm',
-      onPatch: () => ({
-        theme: 'dark' as const,
-        chordsColor: chordColorForTheme('dark', settings.chordsColor)
-      })
-    },
-    {
-      value: 'light',
-      label: 'Paper',
-      title: 'Paper: warm paper background, ink text, warm amber chords',
-      on: 'bg-[#F6F1E7] border-[#D97706] text-[#1A1815] font-bold shadow-sm',
-      onPatch: () => ({ theme: 'light' as const, chordsColor: chordColorForTheme('light') })
-    }
-  ];
+  // Main navigation rows (phone drawer; tablets use the NavRail)
+  const navBase = `w-full flex items-center justify-between px-3.5 h-12 rounded-xl border transition-colors motion-reduce:transition-none cursor-pointer ${t.focus}`;
+  const navActive = `${t.segOn} shadow-sm`;
+  const navIdle = t.ghostBtn;
 
-  const themeSelected = themeOptions.some((o) => o.value === settings.theme);
+  const toolRow = `w-full flex items-center gap-3 px-3.5 h-11 rounded-xl ${t.textStrong} ${t.rowHover} transition-colors motion-reduce:transition-none cursor-pointer ${t.focus}`;
+  const optionBase = `h-10 px-2 rounded-lg border text-xs font-semibold transition-colors motion-reduce:transition-none cursor-pointer ${t.focus}`;
+
+  const countBadge = (active: boolean) =>
+    `text-xs font-keys px-2 py-0.5 rounded-md ${active ? 'bg-black/15 font-bold' : t.numberOff}`;
+
+  const themeSelected = THEME_OPTIONS.some((o) => o.value === settings.theme);
   const instrumentSelected = INSTRUMENTS.some((i) => i === settings.instrument);
 
   return (
@@ -113,17 +109,17 @@ const DrawerPanel: React.FC<Props> = ({
         aria-modal="true"
         aria-label="Main menu"
         tabIndex={-1}
-        className="relative w-72 sm:w-80 h-full bg-[#141210] border-r border-[#2C2924] text-[#F3EEE3] flex flex-col shadow-2xl z-10 focus:outline-none"
+        className={`relative w-72 sm:w-80 h-full border-r flex flex-col shadow-2xl z-10 focus:outline-none ${t.dialog}`}
       >
         {/* Header */}
-        <div className="p-5 border-b border-[#2C2924] bg-[#0F0E0C] flex items-center justify-between">
+        <div className={`p-5 border-b flex items-center justify-between ${t.dialogBar}`}>
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-9 h-9 shrink-0 rounded-xl bg-[#F59E0B] flex items-center justify-center text-[#0F0E0C] font-black">
+            <div className={`w-9 h-9 shrink-0 rounded-xl flex items-center justify-center font-black ${t.accentBtn}`}>
               <Music className="w-5 h-5 fill-current" aria-hidden="true" />
             </div>
             <div className="min-w-0">
               <h2 className="font-display font-semibold text-base tracking-tight leading-tight">Worship SongBook</h2>
-              <p className="text-xs text-[#A8A092] font-keys">Stage &amp; Chord Manager</p>
+              <p className={`text-xs font-keys ${t.textMuted}`}>Stage &amp; Chord Manager</p>
             </div>
           </div>
 
@@ -131,7 +127,7 @@ const DrawerPanel: React.FC<Props> = ({
             type="button"
             onClick={onClose}
             aria-label="Close menu"
-            className={`w-10 h-10 shrink-0 flex items-center justify-center rounded-lg text-[#A8A092] hover:text-[#F3EEE3] hover:bg-[#262320] transition-colors motion-reduce:transition-none cursor-pointer ${focusRing}`}
+            className={`w-10 h-10 shrink-0 flex items-center justify-center rounded-lg transition-colors motion-reduce:transition-none cursor-pointer ${t.iconBtn} ${t.focus}`}
           >
             <X className="w-5 h-5" aria-hidden="true" />
           </button>
@@ -152,15 +148,7 @@ const DrawerPanel: React.FC<Props> = ({
               <Music className="w-4 h-4" aria-hidden="true" />
               <span>Songs</span>
             </div>
-            <span
-              className={`text-xs font-keys px-2 py-0.5 rounded-md ${
-                activeTab === 'library'
-                  ? 'bg-[#0F0E0C]/20 text-[#0F0E0C] font-bold'
-                  : 'bg-[#2C2924] text-[#A8A092]'
-              }`}
-            >
-              {songCount}
-            </span>
+            <span className={countBadge(activeTab === 'library')}>{songCount}</span>
           </button>
 
           <button
@@ -176,18 +164,10 @@ const DrawerPanel: React.FC<Props> = ({
               <ListMusic className="w-4 h-4" aria-hidden="true" />
               <span>Setlist</span>
             </div>
-            <span
-              className={`text-xs font-keys px-2 py-0.5 rounded-md ${
-                activeTab === 'setlists'
-                  ? 'bg-[#0F0E0C]/20 text-[#0F0E0C] font-bold'
-                  : 'bg-[#2C2924] text-[#A8A092]'
-              }`}
-            >
-              {setlistCount}
-            </span>
+            <span className={countBadge(activeTab === 'setlists')}>{setlistCount}</span>
           </button>
 
-          <h3 className="pt-5 pb-1.5 px-3 font-display text-xs font-medium text-[#A8A092]">
+          <h3 className={`pt-5 pb-1.5 px-3 font-display text-xs font-medium ${t.textMuted}`}>
             Tools &amp; practice
           </h3>
 
@@ -199,7 +179,7 @@ const DrawerPanel: React.FC<Props> = ({
             }}
             className={toolRow}
           >
-            <BookOpen className="w-4 h-4 text-[#F59E0B]" aria-hidden="true" />
+            <BookOpen className={`w-4 h-4 ${t.accentText}`} aria-hidden="true" />
             <span>Chord Reference</span>
           </button>
 
@@ -211,7 +191,7 @@ const DrawerPanel: React.FC<Props> = ({
             }}
             className={toolRow}
           >
-            <Volume2 className="w-4 h-4 text-[#F59E0B]" aria-hidden="true" />
+            <Volume2 className={`w-4 h-4 ${t.accentText}`} aria-hidden="true" />
             <span>Stage Metronome</span>
           </button>
 
@@ -225,9 +205,26 @@ const DrawerPanel: React.FC<Props> = ({
               className={`${toolRow} justify-between`}
             >
               <span className="flex items-center gap-3">
-                <RefreshCw className="w-4 h-4 text-[#F59E0B]" aria-hidden="true" />
+                <RefreshCw className={`w-4 h-4 ${t.accentText}`} aria-hidden="true" />
                 <span>อัปเดตเพลงจาก sampleSongs</span>
               </span>
+            </button>
+          )}
+
+          {onOpenShortcuts && (
+            <button
+              type="button"
+              onClick={() => {
+                onClose();
+                onOpenShortcuts();
+              }}
+              className={`${toolRow} justify-between`}
+            >
+              <span className="flex items-center gap-3">
+                <Keyboard className={`w-4 h-4 ${t.accentText}`} aria-hidden="true" />
+                <span>คีย์ลัด &amp; แป้นเหยียบ (Shortcuts)</span>
+              </span>
+              <kbd className={`text-xs font-mono font-bold px-1.5 py-0.5 rounded border ${t.numberOff}`}>?</kbd>
             </button>
           )}
 
@@ -241,23 +238,23 @@ const DrawerPanel: React.FC<Props> = ({
               className={`${toolRow} justify-between`}
             >
               <span className="flex items-center gap-3">
-                <SettingsIcon className="w-4 h-4 text-[#F59E0B]" aria-hidden="true" />
+                <SettingsIcon className={`w-4 h-4 ${t.accentText}`} aria-hidden="true" />
                 <span>การตั้งค่าระบบ (Settings)</span>
               </span>
-              <span className="text-xs text-[#A8A092] font-keys">ปรับแต่ง</span>
+              <span className={`text-xs font-keys ${t.textMuted}`}>ปรับแต่ง</span>
             </button>
           )}
 
-          <h3 className="pt-5 pb-1.5 px-3 font-display text-xs font-medium text-[#A8A092]">
+          <h3 className={`pt-5 pb-1.5 px-3 font-display text-xs font-medium ${t.textMuted}`}>
             Display &amp; stage mode
           </h3>
 
-          <div className="p-3 space-y-4 bg-[#0F0E0C]/60 rounded-xl border border-[#2C2924]">
+          <div className={`p-3 space-y-4 rounded-xl border ${t.card}`}>
             {/* Theme */}
             <div>
-              <span className="block text-sm text-[#F3EEE3] mb-2 font-medium">Stage theme</span>
+              <span className={`block text-sm mb-2 font-medium ${t.textStrong}`}>Stage theme</span>
               <RadioGroup label="Stage theme" className="grid grid-cols-3 gap-1.5">
-                {themeOptions.map((opt, i) => {
+                {THEME_OPTIONS.map((opt, i) => {
                   const selected = settings.theme === opt.value;
                   return (
                     <button
@@ -266,9 +263,14 @@ const DrawerPanel: React.FC<Props> = ({
                       role="radio"
                       aria-checked={selected}
                       tabIndex={tabIndexFor(selected, i, themeSelected)}
-                      onClick={() => onUpdateSettings(opt.onPatch())}
+                      onClick={() =>
+                        onUpdateSettings({
+                          theme: opt.value,
+                          chordsColor: chordColorForTheme(opt.value, settings.chordsColor)
+                        })
+                      }
                       title={opt.title}
-                      className={`${optionBase} ${selected ? opt.on : optionIdle}`}
+                      className={`${optionBase} ${selected ? opt.on : opt.off}`}
                     >
                       {opt.label}
                     </button>
@@ -279,9 +281,7 @@ const DrawerPanel: React.FC<Props> = ({
 
             {/* Instrument */}
             <div>
-              <span className="block text-sm text-[#F3EEE3] mb-2 font-medium">
-                Default instrument
-              </span>
+              <span className={`block text-sm mb-2 font-medium ${t.textStrong}`}>Default instrument</span>
               <RadioGroup label="Default instrument" className="grid grid-cols-3 gap-1.5">
                 {INSTRUMENTS.map((inst, i) => {
                   const selected = settings.instrument === inst;
@@ -293,9 +293,7 @@ const DrawerPanel: React.FC<Props> = ({
                       aria-checked={selected}
                       tabIndex={tabIndexFor(selected, i, instrumentSelected)}
                       onClick={() => onUpdateSettings({ instrument: inst })}
-                      className={`${optionBase} capitalize ${
-                        selected ? 'bg-[#F59E0B] text-[#0F0E0C] border-[#F59E0B] font-bold' : optionIdle
-                      }`}
+                      className={`${optionBase} capitalize ${selected ? t.segOn : t.segOff}`}
                     >
                       {inst}
                     </button>
@@ -307,12 +305,12 @@ const DrawerPanel: React.FC<Props> = ({
         </div>
 
         {/* PWA install */}
-        <div className="p-3 border-t border-[#2C2924] bg-[#0F0E0C]/80">
+        <div className={`p-3 border-t ${t.dialogBar}`}>
           <PWAInstallButton variant="full" />
         </div>
 
         {/* Footer */}
-        <div className="px-4 py-3 border-t border-[#2C2924] bg-[#0F0E0C] text-xs text-[#A8A092] flex items-center justify-between">
+        <div className={`px-4 py-3 border-t text-xs flex items-center justify-between ${t.dialogBar} ${t.textMuted}`}>
           <span>Worship SongBook v1.0</span>
           <span>Offline Ready</span>
         </div>

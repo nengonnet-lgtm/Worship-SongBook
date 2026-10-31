@@ -10,6 +10,7 @@ import { getThemeStyles } from '../utils/themeStyles';
 import type { ThemeStyles } from '../utils/themeStyles';
 import { useDialogBehavior } from '../utils/useDialog';
 import { QuickTransposeButton, normalizeSemitones } from './QuickTransposeButton';
+import { KeyboardShortcutsModal } from './KeyboardShortcutsModal';
 import {
   ChevronLeft,
   ChevronRight,
@@ -26,7 +27,8 @@ import {
   FileCode,
   ChevronDown,
   ListMusic,
-  Menu
+  Menu,
+  Keyboard
 } from 'lucide-react';
 
 /** One row of the "pick a song from the setlist" sheet. `index` is whatever the host's onSelectSong expects. */
@@ -101,8 +103,17 @@ export const SongViewer: React.FC<Props> = ({
   const [showQuickSettings, setShowQuickSettings] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [showSongPicker, setShowSongPicker] = useState(false);
+  const [showShortcuts, setShowShortcuts] = useState(false);
+  const [hudMessage, setHudMessage] = useState<string | null>(null);
+  const hudTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [pdfHint, setPdfHint] = useState<string | null>(null);
   const [capo, setCapo] = useState<number>(song.capo || 0);
+
+  const showHud = (msg: string) => {
+    if (hudTimerRef.current) clearTimeout(hudTimerRef.current);
+    setHudMessage(msg);
+    hudTimerRef.current = setTimeout(() => setHudMessage(null), 1800);
+  };
 
   useLayoutEffect(() => {
     setTransposeSemitones(computeInitialSemitones());
@@ -121,6 +132,7 @@ export const SongViewer: React.FC<Props> = ({
     setShowQuickSettings(false);
     setShowSongPicker(false);
     setShowExportMenu(false);
+    setShowShortcuts(false);
     if (countdownTimerRef.current) {
       clearInterval(countdownTimerRef.current);
       countdownTimerRef.current = null;
@@ -130,6 +142,7 @@ export const SongViewer: React.FC<Props> = ({
   useEffect(
     () => () => {
       if (countdownTimerRef.current) clearInterval(countdownTimerRef.current);
+      if (hudTimerRef.current) clearTimeout(hudTimerRef.current);
     },
     []
   );
@@ -146,6 +159,7 @@ export const SongViewer: React.FC<Props> = ({
     if (setlistContext?.onKeyChange) {
       setlistContext.onKeyChange(song.id, newKey, newSemitones);
     }
+    showHud(`คีย์: ${newKey} (${newSemitones >= 0 ? `+${newSemitones}` : newSemitones})`);
   };
 
   const currentKey = useMemo(() => {
@@ -241,7 +255,7 @@ export const SongViewer: React.FC<Props> = ({
     }
   };
 
-  // Keyboard navigation for scrolling lyrics, switching songs, and auto-scroll
+  // Keyboard navigation & shortcuts for worship leaders, stage performance, and Bluetooth foot pedals
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // 1. Never intercept when user is typing in form elements
@@ -256,63 +270,213 @@ export const SongViewer: React.FC<Props> = ({
         return;
       }
 
-      // 2. Do not intercept if modals or popups are open
+      // 2. Open / Close Shortcuts Help (?)
+      if (e.key === '?' || (e.shiftKey && e.key === '/')) {
+        e.preventDefault();
+        setShowShortcuts((prev) => !prev);
+        return;
+      }
+
+      // If shortcuts modal is open, let Escape close it and don't process other keys
+      if (showShortcuts) {
+        if (e.key === 'Escape') {
+          e.preventDefault();
+          setShowShortcuts(false);
+        }
+        return;
+      }
+
+      // 3. Escape key hierarchy: closes top-most open modal/popup first, or closes the viewer
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        if (activeChordDiagram) {
+          setActiveChordDiagram(null);
+          return;
+        }
+        if (showQuickSettings) {
+          setShowQuickSettings(false);
+          return;
+        }
+        if (showSongPicker) {
+          setShowSongPicker(false);
+          return;
+        }
+        if (showExportMenu) {
+          setShowExportMenu(false);
+          return;
+        }
+        if (onClose) {
+          onClose();
+          return;
+        }
+      }
+
+      // If any other popup or sheet is open, do not handle song performance shortcuts
       if (showQuickSettings || activeChordDiagram || showExportMenu || showSongPicker) {
         return;
       }
 
-      // 3. Arrow Down: scroll lyrics down smoothly
-      if (e.key === 'ArrowDown') {
-        e.preventDefault();
-        scrollContainerRef.current?.scrollBy({ top: 110, behavior: 'smooth' });
-        return;
-      }
-
-      // 4. Arrow Up: scroll lyrics up smoothly
-      if (e.key === 'ArrowUp') {
-        e.preventDefault();
-        scrollContainerRef.current?.scrollBy({ top: -110, behavior: 'smooth' });
-        return;
-      }
-
-      // 5. PageDown: scroll down by 80% viewport height
-      if (e.key === 'PageDown') {
-        e.preventDefault();
-        const pageH = scrollContainerRef.current?.clientHeight || 400;
-        scrollContainerRef.current?.scrollBy({ top: pageH * 0.8, behavior: 'smooth' });
-        return;
-      }
-
-      // 6. PageUp: scroll up by 80% viewport height
-      if (e.key === 'PageUp') {
-        e.preventDefault();
-        const pageH = scrollContainerRef.current?.clientHeight || 400;
-        scrollContainerRef.current?.scrollBy({ top: -pageH * 0.8, behavior: 'smooth' });
-        return;
-      }
-
-      // 7. Arrow Right: switch to next song (only in setlist mode)
-      if (e.key === 'ArrowRight') {
-        if (setlistContext && onNextSong) {
-          e.preventDefault();
-          onNextSong();
-        }
-        return;
-      }
-
-      // 8. Arrow Left: switch to previous song (only in setlist mode)
-      if (e.key === 'ArrowLeft') {
-        if (setlistContext && onPrevSong) {
-          e.preventDefault();
-          onPrevSong();
-        }
-        return;
-      }
-
-      // 9. Spacebar: Play / Pause Auto-scroll
+      // 4. Spacebar: Next song in setlist (or previous if Shift held), or scroll down page if standalone
       if (e.key === ' ' || e.code === 'Space') {
         e.preventDefault();
+        if (e.shiftKey) {
+          if (setlistContext && onPrevSong) {
+            onPrevSong();
+            showHud('⬅ เพลงก่อนหน้า');
+          } else {
+            const pageH = scrollContainerRef.current?.clientHeight || 400;
+            scrollContainerRef.current?.scrollBy({ top: -pageH * 0.6, behavior: 'smooth' });
+          }
+        } else {
+          if (setlistContext && onNextSong) {
+            onNextSong();
+            showHud('เพลงถัดไป ➔');
+          } else {
+            const pageH = scrollContainerRef.current?.clientHeight || 400;
+            scrollContainerRef.current?.scrollBy({ top: pageH * 0.6, behavior: 'smooth' });
+          }
+        }
+        return;
+      }
+
+      // 5. Arrow Right / PageDown: Next song in setlist, or page down if single song
+      if (e.key === 'ArrowRight' || e.key === 'PageDown') {
+        e.preventDefault();
+        if (setlistContext && onNextSong) {
+          onNextSong();
+          showHud('เพลงถัดไป ➔');
+        } else {
+          const pageH = scrollContainerRef.current?.clientHeight || 400;
+          scrollContainerRef.current?.scrollBy({ top: pageH * 0.8, behavior: 'smooth' });
+        }
+        return;
+      }
+
+      // 6. Arrow Left / PageUp: Previous song in setlist, or page up if single song
+      if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+        e.preventDefault();
+        if (setlistContext && onPrevSong) {
+          onPrevSong();
+          showHud('⬅ เพลงก่อนหน้า');
+        } else {
+          const pageH = scrollContainerRef.current?.clientHeight || 400;
+          scrollContainerRef.current?.scrollBy({ top: -pageH * 0.8, behavior: 'smooth' });
+        }
+        return;
+      }
+
+      // 7. Arrow Down: Smooth section scrolling down
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        scrollContainerRef.current?.scrollBy({ top: 130, behavior: 'smooth' });
+        return;
+      }
+
+      // 8. Arrow Up: Smooth section scrolling up
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        scrollContainerRef.current?.scrollBy({ top: -130, behavior: 'smooth' });
+        return;
+      }
+
+      // 9. Home / End: Top and bottom of song
+      if (e.key === 'Home') {
+        e.preventDefault();
+        scrollContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+        showHud('ต้นเพลง (Top)');
+        return;
+      }
+      if (e.key === 'End') {
+        e.preventDefault();
+        const maxScroll = scrollContainerRef.current?.scrollHeight || 0;
+        scrollContainerRef.current?.scrollTo({ top: maxScroll, behavior: 'smooth' });
+        showHud('ท้ายเพลง (End)');
+        return;
+      }
+
+      // 10. Transpose: + or = (up 1), - or _ (down 1), 0 (reset)
+      if (e.key === '+' || e.key === '=') {
+        e.preventDefault();
+        handleUpdateTranspose(transposeSemitones + 1);
+        return;
+      }
+      if (e.key === '-' || e.key === '_') {
+        e.preventDefault();
+        handleUpdateTranspose(transposeSemitones - 1);
+        return;
+      }
+      if (e.key === '0') {
+        e.preventDefault();
+        handleUpdateTranspose(0);
+        showHud('รีเซ็ตคีย์เดิม (Original Key)');
+        return;
+      }
+
+      // 11. Auto-scroll toggle (s or S)
+      if (e.key === 's' || e.key === 'S') {
+        e.preventDefault();
         handleToggleAutoScroll();
+        showHud(isScrolling ? 'หยุดเลื่อนชั่วคราว (Paused)' : 'เริ่มเลื่อนอัตโนมัติ (Auto-scroll)');
+        return;
+      }
+
+      // 12. Auto-scroll speed adjust ([ or ] / slower or faster)
+      if (e.key === '[') {
+        if (onUpdateSettings) {
+          e.preventDefault();
+          const currentSpeed = settings.autoScrollSpeed || 3;
+          const newSpeed = Math.max(1, currentSpeed - 1);
+          onUpdateSettings({ autoScrollSpeed: newSpeed });
+          showHud(`ความเร็วเลื่อน: ${newSpeed} / 10`);
+        }
+        return;
+      }
+      if (e.key === ']') {
+        if (onUpdateSettings) {
+          e.preventDefault();
+          const currentSpeed = settings.autoScrollSpeed || 3;
+          const newSpeed = Math.min(10, currentSpeed + 1);
+          onUpdateSettings({ autoScrollSpeed: newSpeed });
+          showHud(`ความเร็วเลื่อน: ${newSpeed} / 10`);
+        }
+        return;
+      }
+
+      // 13. Fullscreen toggle (f or F)
+      if (e.key === 'f' || e.key === 'F') {
+        e.preventDefault();
+        toggleFullscreen();
+        return;
+      }
+
+      // 14. Toggle Chords (c or C)
+      if (e.key === 'c' || e.key === 'C') {
+        if (onUpdateSettings) {
+          e.preventDefault();
+          const next = !settings.showChords;
+          onUpdateSettings({ showChords: next });
+          showHud(next ? 'แสดงคอร์ด (Chords ON)' : 'ซ่อนคอร์ด (Chords OFF)');
+        }
+        return;
+      }
+
+      // 15. Toggle Chord diagrams helper (d or D)
+      if (e.key === 'd' || e.key === 'D') {
+        e.preventDefault();
+        setShowQuickSettings((v) => !v);
+        return;
+      }
+
+      // 16. Cycle Themes (t or T)
+      if (e.key === 't' || e.key === 'T') {
+        if (onUpdateSettings) {
+          e.preventDefault();
+          const themes: ('stage-black' | 'dark' | 'light')[] = ['stage-black', 'dark', 'light'];
+          const curIdx = themes.indexOf(settings.theme as any);
+          const nextTheme = themes[(curIdx + 1) % themes.length];
+          onUpdateSettings({ theme: nextTheme });
+          showHud(`ธีม: ${nextTheme === 'stage-black' ? 'Ink (เวที)' : nextTheme === 'dark' ? 'Midnight' : 'Paper'}`);
+        }
         return;
       }
     };
@@ -321,7 +485,24 @@ export const SongViewer: React.FC<Props> = ({
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [onNextSong, onPrevSong, showQuickSettings, activeChordDiagram, showExportMenu, showSongPicker, isScrolling, countdown]);
+  }, [
+    onNextSong,
+    onPrevSong,
+    onClose,
+    showShortcuts,
+    showQuickSettings,
+    activeChordDiagram,
+    showExportMenu,
+    showSongPicker,
+    isScrolling,
+    countdown,
+    transposeSemitones,
+    settings.theme,
+    settings.showChords,
+    settings.autoScrollSpeed,
+    onUpdateSettings,
+    setlistContext
+  ]);
 
   useEffect(() => {
     const sync = () => {
@@ -676,8 +857,19 @@ export const SongViewer: React.FC<Props> = ({
           </button>
 
           <button
+            type="button"
+            onClick={() => setShowShortcuts((v) => !v)}
+            className={`p-1.5 rounded-lg border cursor-pointer ${t.ghostBtn}`}
+            title="คีย์ลัดคีย์บอร์ดและแป้นเหยียบสำหรับผู้นำนมัสการ (กด ? บนคีย์บอร์ด)"
+            aria-label="คีย์ลัดคีย์บอร์ด"
+          >
+            <Keyboard className="w-4 h-4" />
+          </button>
+
+          <button
             onClick={toggleFullscreen}
             className={`p-1.5 rounded-lg border cursor-pointer ${t.ghostBtn}`}
+            title={isFullscreen ? 'ออกจากเต็มจอ (Esc หรือ F)' : 'แสดงเต็มจอ (F)'}
           >
             {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
           </button>
@@ -838,10 +1030,32 @@ export const SongViewer: React.FC<Props> = ({
               chord={activeChordDiagram}
               instrument={settings.instrument || 'guitar'}
               onClose={() => setActiveChordDiagram(null)}
+              theme={settings.theme}
             />
           </div>
         </div>
       )}
+
+      {/* HUD toast for keyboard & foot pedal actions */}
+      {hudMessage && (
+        <div
+          role="status"
+          className={`no-print pointer-events-none fixed bottom-16 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-full border shadow-2xl text-xs font-keys font-bold backdrop-blur-md animate-scaleIn ${
+            t.isLight
+              ? 'bg-[#1F1C17] text-[#F3EEE3] border-[#3A362F]'
+              : 'bg-[#0F0E0C]/95 text-[#F59E0B] border-[#F59E0B]/30'
+          }`}
+        >
+          {hudMessage}
+        </div>
+      )}
+
+      {/* Keyboard Shortcuts Help Modal */}
+      <KeyboardShortcutsModal
+        isOpen={showShortcuts}
+        onClose={() => setShowShortcuts(false)}
+        theme={settings.theme}
+      />
     </div>
   );
 };

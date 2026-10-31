@@ -16,6 +16,7 @@ interface Props {
 const CHORD_COLORS = [
   { name: 'ส้มเหลืองสว่าง (Signal)', hex: '#F59E0B' },
   { name: 'Warm Amber', hex: '#D97706' },
+  { name: 'Deep Amber (Paper)', hex: '#B45309' },
   { name: 'Bright Yellow', hex: '#fbbf24' },
   { name: 'Sky Blue', hex: '#38bdf8' },
   { name: 'Emerald', hex: '#34d399' },
@@ -24,6 +25,9 @@ const CHORD_COLORS = [
   { name: 'Royal Blue', hex: '#1d4ed8' },
   { name: 'White', hex: '#ffffff' }
 ];
+
+// Swatches that are too light for a white check mark
+const LIGHT_SWATCHES = ['#ffffff', '#facc15', '#fbbf24', '#f59e0b', '#38bdf8', '#34d399'];
 
 const INSTRUMENTS: { value: InstrumentType; label: string }[] = [
   { value: 'guitar', label: 'กีตาร์' },
@@ -48,17 +52,17 @@ const THEME_TILES = [
   },
   {
     value: 'dark',
-    label: 'Graphite',
+    label: 'Midnight',
     Icon: Monitor,
-    on: 'bg-[#101418] border-[#F59E0B] text-[#E9EDF2]',
-    off: 'bg-[#101418] border-[#38424D] text-[#9BA5B2] hover:border-[#5B6877]'
+    on: 'bg-[#0D1526] border-[#38BDF8] text-[#E8EEF8]',
+    off: 'bg-[#0D1526] border-[#2C3D5E] text-[#93A3BF] hover:border-[#4A5F88]'
   },
   {
     value: 'light',
     label: 'Paper',
     Icon: Sun,
-    on: 'bg-[#F6F1E7] border-[#D97706] text-[#1A1815]',
-    off: 'bg-[#F6F1E7] border-[#CFC5B0] text-[#6B6558] hover:border-[#A89F8B]'
+    on: 'bg-[#F8F6F1] border-[#B45309] text-[#1F1C17]',
+    off: 'bg-[#F8F6F1] border-[#D8D1C2] text-[#6A6458] hover:border-[#B5AC98]'
   }
 ] as const;
 
@@ -238,14 +242,18 @@ const SettingsDialog: React.FC<Props> = ({ onClose, settings, onUpdateSettings }
                     className={`w-10 h-10 rounded-full border border-black/25 flex items-center justify-center cursor-pointer transition-transform motion-reduce:transition-none ${
                       selected
                         ? `scale-105 ring-2 ring-offset-2 ${
-                            t.isLight ? 'ring-[#1A1815] ring-offset-[#FBF8F1]' : 'ring-[#F3EEE3] ring-offset-[#1A1815]'
+                            t.name === 'light'
+                              ? 'ring-[#1F1C17] ring-offset-[#FFFFFF]'
+                              : t.name === 'dark'
+                                ? 'ring-[#E8EEF8] ring-offset-[#16223B]'
+                                : 'ring-[#F3EEE3] ring-offset-[#1A1815]'
                           }`
                         : 'hover:scale-105'
                     } ${t.focus}`}
                   >
                     {selected && (
                       <Check
-                        className={`w-4 h-4 ${col.hex === '#ffffff' || col.hex === '#facc15' ? 'text-black' : 'text-white'}`}
+                        className={`w-4 h-4 ${LIGHT_SWATCHES.includes(col.hex.toLowerCase()) ? 'text-black' : 'text-white'}`}
                         aria-hidden="true"
                       />
                     )}

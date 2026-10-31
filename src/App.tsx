@@ -12,6 +12,7 @@ import { SettingsModal } from './components/SettingsModal';
 import { MetronomeBar } from './components/MetronomeBar';
 import { ConfirmDialog } from './components/ConfirmDialog';
 import { OfflineIndicator } from './components/OfflineIndicator';
+import { KeyboardShortcutsModal } from './components/KeyboardShortcutsModal';
 import { X } from 'lucide-react';
 import { getThemeStyles, SIGNAL_ON_DARK } from './utils/themeStyles';
 
@@ -104,8 +105,107 @@ export default function App() {
   const [showChordLibrary, setShowChordLibrary] = useState(false);
   const [showFloatingMetronome, setShowFloatingMetronome] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [showShortcutsModal, setShowShortcutsModal] = useState(false);
   const [sampleUpdate, setSampleUpdate] = useState<{ changed: number; added: number } | null>(null);
   const [updateNotice, setUpdateNotice] = useState<string | null>(null);
+
+  // Global shortcuts when in Library or Setlist view (no song viewer open)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.tagName === 'SELECT' ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+
+      // Help modal shortcut (?) works in all screens
+      if (e.key === '?' || (e.shiftKey && e.key === '/')) {
+        e.preventDefault();
+        setShowShortcutsModal((v) => !v);
+        return;
+      }
+
+      // Close shortcuts modal on Escape
+      if (showShortcutsModal) {
+        if (e.key === 'Escape') {
+          e.preventDefault();
+          setShowShortcutsModal(false);
+        }
+        return;
+      }
+
+      // If an overlay modal is active, do not trigger other shortcuts
+      if (editingSong || showChordLibrary || showSettingsModal || sampleUpdate || isSidebarOpen) {
+        return;
+      }
+
+      // Only handle these when song viewer is closed
+      if (selectedSong) return;
+
+      // Tab switching: 1 = Songs, 2 = Setlists
+      if (e.key === '1') {
+        e.preventDefault();
+        setActiveTab('library');
+        return;
+      }
+      if (e.key === '2') {
+        e.preventDefault();
+        setActiveTab('setlists');
+        return;
+      }
+
+      // New song: n or N
+      if (e.key === 'n' || e.key === 'N') {
+        e.preventDefault();
+        setEditingSong('new');
+        return;
+      }
+
+      // Metronome toggle: m or M
+      if (e.key === 'm' || e.key === 'M') {
+        e.preventDefault();
+        setShowFloatingMetronome((v) => !v);
+        return;
+      }
+
+      // Chord dictionary: k or K
+      if (e.key === 'k' || e.key === 'K') {
+        e.preventDefault();
+        setShowChordLibrary((v) => !v);
+        return;
+      }
+
+      // Cycle theme: t or T
+      if (e.key === 't' || e.key === 'T') {
+        e.preventDefault();
+        const themes: ('stage-black' | 'dark' | 'light')[] = ['stage-black', 'dark', 'light'];
+        const curIdx = themes.indexOf(settings.theme as any);
+        const nextTheme = themes[(curIdx + 1) % themes.length];
+        setSettings((prev) => ({ ...prev, theme: nextTheme }));
+        setUpdateNotice(`ธีม: ${nextTheme === 'stage-black' ? 'Ink (เวที)' : nextTheme === 'dark' ? 'Midnight' : 'Paper'}`);
+        return;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [
+    selectedSong,
+    showShortcutsModal,
+    editingSong,
+    showChordLibrary,
+    showSettingsModal,
+    sampleUpdate,
+    isSidebarOpen,
+    settings.theme
+  ]);
 
   // Sync to localStorage
   useEffect(() => {
@@ -586,6 +686,7 @@ export default function App() {
         onOpenChords={() => setShowChordLibrary(true)}
         onOpenMetronome={() => setShowFloatingMetronome(true)}
         onOpenSettings={() => setShowSettingsModal(true)}
+        onOpenShortcuts={() => setShowShortcutsModal(true)}
         onUpdateSongs={requestSampleUpdate}
         settings={settings}
         onUpdateSettings={updateSettings}
@@ -599,6 +700,7 @@ export default function App() {
           onOpenChords={() => setShowChordLibrary(true)}
           onOpenMetronome={() => setShowFloatingMetronome(true)}
           onOpenSettings={() => setShowSettingsModal(true)}
+          onOpenShortcuts={() => setShowShortcutsModal(true)}
           onUpdateSongs={requestSampleUpdate}
           isMetronomeOpen={showFloatingMetronome}
           theme={settings.theme}
@@ -725,18 +827,18 @@ export default function App() {
           <div className="relative">
             <button
               onClick={() => setShowFloatingMetronome(false)}
-              className="absolute top-2 right-2 p-1 rounded-full text-neutral-400 hover:text-neutral-100 hover:bg-neutral-800 z-10 cursor-pointer"
+              className={`absolute top-2 right-2 p-1 rounded-full z-10 cursor-pointer ${appTheme.iconBtn}`}
               title="Close Metronome"
             >
               <X className="w-3.5 h-3.5" />
             </button>
-            <MetronomeBar />
+            <MetronomeBar theme={settings.theme} />
           </div>
         </div>
       )}
 
       {showChordLibrary && (
-        <ChordLibraryModal onClose={() => setShowChordLibrary(false)} />
+        <ChordLibraryModal onClose={() => setShowChordLibrary(false)} theme={settings.theme} />
       )}
 
       {editingSong && (
@@ -754,6 +856,14 @@ export default function App() {
           onClose={() => setShowSettingsModal(false)}
           settings={settings}
           onUpdateSettings={updateSettings}
+        />
+      )}
+
+      {showShortcutsModal && (
+        <KeyboardShortcutsModal
+          isOpen={showShortcutsModal}
+          onClose={() => setShowShortcutsModal(false)}
+          theme={settings.theme}
         />
       )}
 

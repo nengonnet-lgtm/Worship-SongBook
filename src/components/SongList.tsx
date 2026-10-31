@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useMemo, useRef, useState, useEffect } from 'react';
 import { Song, Setlist, AppSettings } from '../types/song';
 import { KEYS } from '../utils/chordUtils';
 import {
@@ -214,12 +214,22 @@ const SongRow: React.FC<{
   song: Song;
   setlists: Setlist[];
   t: ThemeStyles;
+  isFocused?: boolean;
   onSelect: (song: Song) => void;
   onEdit: (song: Song) => void;
   onRequestDelete: (song: Song) => void;
   onAddToSetlist: (setlistId: string, songId: string) => void;
-}> = ({ song, setlists, t, onSelect, onEdit, onRequestDelete, onAddToSetlist }) => (
-  <div className={`group flex items-center gap-1 px-3 py-2.5 rounded-2xl transition-colors motion-reduce:transition-none ${t.rowHover}`}>
+}> = ({ song, setlists, t, isFocused, onSelect, onEdit, onRequestDelete, onAddToSetlist }) => (
+  <div
+    data-song-id={song.id}
+    className={`group flex items-center gap-1 px-3 py-2.5 rounded-2xl transition-colors motion-reduce:transition-none ${
+      isFocused
+        ? t.isLight
+          ? 'bg-[#EAE5D9] ring-2 ring-[#B45309]'
+          : 'bg-white/10 ring-2 ring-[#F59E0B]'
+        : t.rowHover
+    }`}
+  >
     {/* Everything on the left opens the song; a real button so Tab / Enter / Space work */}
     <button
       type="button"
@@ -275,8 +285,11 @@ export const SongList: React.FC<Props> = ({
   const [sortBy, setSortBy] = useState<SortBy>('title');
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<Song | null>(null);
+  const [focusedIndex, setFocusedIndex] = useState<number>(-1);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const listContainerRef = useRef<HTMLDivElement>(null);
   const exportWrapRef = useRef<HTMLDivElement>(null);
   const exportTriggerRef = useRef<HTMLButtonElement>(null);
   useDismiss(exportWrapRef, showExportMenu, () => setShowExportMenu(false), exportTriggerRef);
@@ -340,6 +353,102 @@ export const SongList: React.FC<Props> = ({
       .sort((a, b) => a.rank - b.rank || bySortOption(a.song, b.song))
       .map((entry) => entry.song);
   }, [songs, searchQuery, selectedKey, sortBy, lyricIndex]);
+
+  // Reset focus when filters change
+  useEffect(() => {
+    setFocusedIndex(-1);
+  }, [searchQuery, selectedKey, sortBy]);
+
+  // Keyboard navigation across songs in the library
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      const isInput =
+        target &&
+        (target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.tagName === 'SELECT' ||
+          target.isContentEditable);
+
+      // 1. Quick focus search bar on '/'
+      if (e.key === '/' && !isInput) {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+        searchInputRef.current?.select();
+        return;
+      }
+
+      // 2. When search input is active
+      if (target === searchInputRef.current) {
+        if (e.key === 'Escape') {
+          e.preventDefault();
+          if (searchQuery) {
+            setSearchQuery('');
+          } else {
+            searchInputRef.current?.blur();
+          }
+          return;
+        }
+        if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          if (filteredSongs.length > 0) {
+            setFocusedIndex(0);
+            searchInputRef.current?.blur();
+          }
+          return;
+        }
+        if (e.key === 'Enter' && filteredSongs.length > 0) {
+          e.preventDefault();
+          onSelectSong(filteredSongs[0]);
+          return;
+        }
+        return;
+      }
+
+      // Do not intercept if in another input or modal
+      if (isInput || pendingDelete || showExportMenu) {
+        return;
+      }
+
+      // 3. Arrow Down in song list
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setFocusedIndex((prev) => (prev < filteredSongs.length - 1 ? prev + 1 : prev));
+        return;
+      }
+
+      // 4. Arrow Up in song list
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setFocusedIndex((prev) => (prev > 0 ? prev - 1 : 0));
+        return;
+      }
+
+      // 5. Enter or Space opens focused song
+      if ((e.key === 'Enter' || e.key === ' ') && focusedIndex >= 0 && focusedIndex < filteredSongs.length) {
+        e.preventDefault();
+        onSelectSong(filteredSongs[focusedIndex]);
+        return;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [filteredSongs, focusedIndex, searchQuery, pendingDelete, showExportMenu, onSelectSong]);
+
+  // Scroll focused song into view
+  useEffect(() => {
+    if (focusedIndex >= 0 && listContainerRef.current) {
+      const el = listContainerRef.current.querySelector(
+        `[data-song-id="${filteredSongs[focusedIndex]?.id}"]`
+      );
+      if (el) {
+        el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      }
+    }
+  }, [focusedIndex, filteredSongs]);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -536,16 +645,11 @@ export const SongList: React.FC<Props> = ({
               aria-hidden="true"
             />
             <input
+              ref={searchInputRef}
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Escape' && searchQuery) {
-                  e.stopPropagation();
-                  setSearchQuery('');
-                }
-              }}
-              placeholder="ค้นหาชื่อเพลง ศิลปิน หรือเนื้อร้อง"
+              placeholder="ค้นหาชื่อเพลง ศิลปิน หรือเนื้อร้อง (กด / เพื่อค้นหา)"
               aria-label="Search songs by title, artist or lyrics"
               autoComplete="off"
               spellCheck={false}
@@ -616,7 +720,7 @@ export const SongList: React.FC<Props> = ({
       </div>
 
       {/* Song rows */}
-      <div className={`flex-1 overflow-y-auto px-3 sm:px-5 pb-8 divide-y ${t.divide}`}>
+      <div ref={listContainerRef} className={`flex-1 overflow-y-auto px-3 sm:px-5 pb-8 divide-y ${t.divide}`}>
         {filteredSongs.length === 0 ? (
           songs.length === 0 ? (
             <div className="py-20 px-4 text-center flex flex-col items-center justify-center gap-3">
@@ -658,12 +762,13 @@ export const SongList: React.FC<Props> = ({
             </div>
           )
         ) : (
-          filteredSongs.map((song) => (
+          filteredSongs.map((song, idx) => (
             <SongRow
               key={song.id}
               song={song}
               setlists={setlists}
               t={t}
+              isFocused={idx === focusedIndex}
               onSelect={onSelectSong}
               onEdit={onEditSong}
               onRequestDelete={setPendingDelete}

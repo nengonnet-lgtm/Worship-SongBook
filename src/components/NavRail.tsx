@@ -1,5 +1,5 @@
 import React from 'react';
-import { Music, ListMusic, BookOpen, Timer, Settings, RefreshCw } from 'lucide-react';
+import { Music, ListMusic, BookOpen, Timer, Settings, RefreshCw, Keyboard } from 'lucide-react';
 import { getThemeStyles } from '../utils/themeStyles';
 
 interface Props {
@@ -8,6 +8,7 @@ interface Props {
   onOpenChords: () => void;
   onOpenMetronome: () => void;
   onOpenSettings: () => void;
+  onOpenShortcuts?: () => void;
   /** Replace library songs with the bundled sampleSongs (asks for confirmation in App) */
   onUpdateSongs?: () => void;
   isMetronomeOpen?: boolean;
@@ -24,6 +25,7 @@ export const NavRail: React.FC<Props> = ({
   onOpenChords,
   onOpenMetronome,
   onOpenSettings,
+  onOpenShortcuts,
   onUpdateSongs,
   isMetronomeOpen,
   theme
@@ -91,7 +93,24 @@ export const NavRail: React.FC<Props> = ({
           อัปเดต
         </button>
       )}
-      <button type="button" onClick={onOpenSettings} className={`${item(false)} ${onUpdateSongs ? '' : 'mt-auto'}`}>
+      {onOpenShortcuts && (
+        <button
+          type="button"
+          onClick={onOpenShortcuts}
+          title="คีย์ลัดคีย์บอร์ด & แป้นเหยียบ (กด ?)"
+          aria-label="คีย์ลัดคีย์บอร์ด (กด ?)"
+          className={`${item(false)} ${onUpdateSongs ? '' : 'mt-auto'}`}
+        >
+          <Keyboard className="w-[22px] h-[22px]" aria-hidden="true" />
+          Shortcuts
+        </button>
+      )}
+
+      <button
+        type="button"
+        onClick={onOpenSettings}
+        className={`${item(false)} ${onUpdateSongs || onOpenShortcuts ? '' : 'mt-auto'}`}
+      >
         <Settings className="w-[22px] h-[22px]" aria-hidden="true" />
         Settings
       </button>

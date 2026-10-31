@@ -2,19 +2,24 @@ import React from 'react';
 import { GUITAR_CHORDS, UKULELE_CHORDS, getChordMidiNotes, playChordSound } from '../utils/chordDiagrams';
 import { InstrumentType } from '../types/song';
 import { Volume2 } from 'lucide-react';
+import { getThemeStyles, ThemeStyles } from '../utils/themeStyles';
 
 interface Props {
   chord: string;
   instrument?: InstrumentType;
   onClose?: () => void;
   showStrumButton?: boolean;
+  theme?: string;
 }
 
 export const ChordDiagramVisualizer: React.FC<Props> = ({
   chord,
   instrument = 'guitar',
-  showStrumButton = true
+  showStrumButton = true,
+  theme
 }) => {
+  const t = getThemeStyles(theme);
+
   // Strip slash notes for base diagram lookup if needed
   const baseChord = chord.split('/')[0].trim();
   const guitarData = GUITAR_CHORDS[baseChord] || GUITAR_CHORDS[chord];
@@ -26,18 +31,18 @@ export const ChordDiagramVisualizer: React.FC<Props> = ({
   };
 
   return (
-    <div className="flex flex-col items-center p-3 rounded-lg bg-neutral-900 border border-neutral-800 text-neutral-100 shadow-xl max-w-xs">
-      <div className="flex items-center justify-between w-full mb-2 pb-1 border-b border-neutral-800">
-        <span className="text-lg font-bold tracking-tight text-amber-400 font-mono">
+    <div className={`flex flex-col items-center p-3.5 rounded-2xl border shadow-xl max-w-xs ${t.dialog}`}>
+      <div className={`flex items-center justify-between w-full mb-2 pb-1.5 border-b ${t.popoverDivider}`}>
+        <span className={`text-lg font-bold tracking-tight font-mono ${t.accentText}`}>
           {chord}
         </span>
         {showStrumButton && (
           <button
             onClick={handlePlaySound}
             title="Hear chord sound"
-            className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-md bg-neutral-800 hover:bg-neutral-700 text-neutral-200 transition-colors cursor-pointer"
+            className={`flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-md border transition-colors cursor-pointer ${t.ghostBtn}`}
           >
-            <Volume2 className="w-3.5 h-3.5 text-amber-400" />
+            <Volume2 className={`w-3.5 h-3.5 ${t.accentText}`} />
             <span>Strum</span>
           </button>
         )}
@@ -46,39 +51,39 @@ export const ChordDiagramVisualizer: React.FC<Props> = ({
       {instrument === 'guitar' && (
         <div className="flex flex-col items-center">
           {guitarData ? (
-            <GuitarDiagram data={guitarData} />
+            <GuitarDiagram data={guitarData} t={t} />
           ) : (
-            <div className="py-6 text-xs text-neutral-400 text-center">
+            <div className={`py-6 text-xs text-center ${t.textMuted}`}>
               Fretboard diagram preview for {chord}
               <button
                 onClick={handlePlaySound}
-                className="mt-2 block mx-auto text-amber-400 underline"
+                className={`mt-2 block mx-auto underline ${t.accentText}`}
               >
                 Play Audio Strum
               </button>
             </div>
           )}
-          <span className="text-[11px] text-neutral-400 mt-1">Guitar (E A D G B E)</span>
+          <span className={`text-[11px] mt-1 ${t.textMuted}`}>Guitar (E A D G B E)</span>
         </div>
       )}
 
       {instrument === 'ukulele' && (
         <div className="flex flex-col items-center">
           {ukuleleData ? (
-            <UkuleleDiagram data={ukuleleData} />
+            <UkuleleDiagram data={ukuleleData} t={t} />
           ) : (
-            <div className="py-6 text-xs text-neutral-400 text-center">
+            <div className={`py-6 text-xs text-center ${t.textMuted}`}>
               Ukulele diagram for {chord}
             </div>
           )}
-          <span className="text-[11px] text-neutral-400 mt-1">Ukulele (G C E A)</span>
+          <span className={`text-[11px] mt-1 ${t.textMuted}`}>Ukulele (G C E A)</span>
         </div>
       )}
 
       {instrument === 'piano' && (
         <div className="flex flex-col items-center">
-          <PianoDiagram chord={chord} />
-          <span className="text-[11px] text-neutral-400 mt-1">Piano Keys</span>
+          <PianoDiagram chord={chord} t={t} />
+          <span className={`text-[11px] mt-1 ${t.textMuted}`}>Piano Keys</span>
         </div>
       )}
     </div>
@@ -86,7 +91,7 @@ export const ChordDiagramVisualizer: React.FC<Props> = ({
 };
 
 // SVG Guitar Fretboard
-const GuitarDiagram: React.FC<{ data: typeof GUITAR_CHORDS[string] }> = ({ data }) => {
+const GuitarDiagram: React.FC<{ data: typeof GUITAR_CHORDS[string]; t: ThemeStyles }> = ({ data, t }) => {
   const numStrings = 6;
   const numFrets = 4;
   const stringSpacing = 16;
@@ -97,6 +102,11 @@ const GuitarDiagram: React.FC<{ data: typeof GUITAR_CHORDS[string] }> = ({ data 
   const height = startY + numFrets * fretSpacing + 12;
 
   const frets = data.frets; // 6 strings
+  const nutColor = t.isLight ? '#1F1C17' : '#E8EEF8';
+  const fretColor = t.isLight ? '#D8D1C2' : '#525252';
+  const stringColor = t.isLight ? '#6A6458' : '#737373';
+  const dotColor = t.signalHex;
+  const dotTextColor = t.isLight ? '#FFFFFF' : '#06121F';
 
   return (
     <svg width={width} height={height} className="select-none overflow-visible">
@@ -106,7 +116,7 @@ const GuitarDiagram: React.FC<{ data: typeof GUITAR_CHORDS[string] }> = ({ data 
         y1={startY}
         x2={startX + (numStrings - 1) * stringSpacing}
         y2={startY}
-        stroke="#e5e5e5"
+        stroke={nutColor}
         strokeWidth="3.5"
       />
 
@@ -118,7 +128,7 @@ const GuitarDiagram: React.FC<{ data: typeof GUITAR_CHORDS[string] }> = ({ data 
           y1={startY + f * fretSpacing}
           x2={startX + (numStrings - 1) * stringSpacing}
           y2={startY + f * fretSpacing}
-          stroke="#525252"
+          stroke={fretColor}
           strokeWidth="1.2"
         />
       ))}
@@ -131,7 +141,7 @@ const GuitarDiagram: React.FC<{ data: typeof GUITAR_CHORDS[string] }> = ({ data 
           y1={startY}
           x2={startX + s * stringSpacing}
           y2={startY + numFrets * fretSpacing}
-          stroke="#737373"
+          stroke={stringColor}
           strokeWidth={1 + (numStrings - s) * 0.25}
         />
       ))}
@@ -147,7 +157,7 @@ const GuitarDiagram: React.FC<{ data: typeof GUITAR_CHORDS[string] }> = ({ data 
               x={x}
               y={startY - 6}
               textAnchor="middle"
-              className="text-[10px] font-mono fill-neutral-400 font-bold"
+              className={`text-[10px] font-mono font-bold ${t.isLight ? 'fill-neutral-600' : 'fill-neutral-400'}`}
             >
               ×
             </text>
@@ -161,7 +171,7 @@ const GuitarDiagram: React.FC<{ data: typeof GUITAR_CHORDS[string] }> = ({ data 
               cy={startY - 8}
               r="3.5"
               fill="none"
-              stroke="#a3a3a3"
+              stroke={t.isLight ? '#6A6458' : '#A3A3A3'}
               strokeWidth="1.5"
             />
           );
@@ -177,7 +187,7 @@ const GuitarDiagram: React.FC<{ data: typeof GUITAR_CHORDS[string] }> = ({ data 
           width={(numStrings - 1) * stringSpacing}
           height="8"
           rx="4"
-          fill="#38bdf8"
+          fill={dotColor}
           opacity="0.85"
         />
       )}
@@ -191,13 +201,14 @@ const GuitarDiagram: React.FC<{ data: typeof GUITAR_CHORDS[string] }> = ({ data 
 
           return (
             <g key={`dot-${stringIdx}`}>
-              <circle cx={x} cy={y} r="5.5" fill="#38bdf8" />
+              <circle cx={x} cy={y} r="5.5" fill={dotColor} />
               {finger && finger > 0 && (
                 <text
                   x={x}
                   y={y + 3}
                   textAnchor="middle"
-                  className="text-[9px] font-bold fill-neutral-950 select-none pointer-events-none"
+                  fill={dotTextColor}
+                  className="text-[9px] font-bold select-none pointer-events-none"
                 >
                   {finger}
                 </text>
@@ -212,7 +223,7 @@ const GuitarDiagram: React.FC<{ data: typeof GUITAR_CHORDS[string] }> = ({ data 
 };
 
 // SVG Ukulele Diagram (4 strings)
-const UkuleleDiagram: React.FC<{ data: typeof UKULELE_CHORDS[string] }> = ({ data }) => {
+const UkuleleDiagram: React.FC<{ data: typeof UKULELE_CHORDS[string]; t: ThemeStyles }> = ({ data, t }) => {
   const numStrings = 4;
   const numFrets = 4;
   const stringSpacing = 16;
@@ -223,6 +234,10 @@ const UkuleleDiagram: React.FC<{ data: typeof UKULELE_CHORDS[string] }> = ({ dat
   const height = startY + numFrets * fretSpacing + 12;
 
   const frets = data.frets;
+  const nutColor = t.isLight ? '#1F1C17' : '#E8EEF8';
+  const fretColor = t.isLight ? '#D8D1C2' : '#525252';
+  const stringColor = t.isLight ? '#6A6458' : '#737373';
+  const dotColor = t.signalHex;
 
   return (
     <svg width={width} height={height} className="select-none overflow-visible">
@@ -231,7 +246,7 @@ const UkuleleDiagram: React.FC<{ data: typeof UKULELE_CHORDS[string] }> = ({ dat
         y1={startY}
         x2={startX + (numStrings - 1) * stringSpacing}
         y2={startY}
-        stroke="#e5e5e5"
+        stroke={nutColor}
         strokeWidth="3.5"
       />
 
@@ -242,7 +257,7 @@ const UkuleleDiagram: React.FC<{ data: typeof UKULELE_CHORDS[string] }> = ({ dat
           y1={startY + f * fretSpacing}
           x2={startX + (numStrings - 1) * stringSpacing}
           y2={startY + f * fretSpacing}
-          stroke="#525252"
+          stroke={fretColor}
           strokeWidth="1.2"
         />
       ))}
@@ -254,7 +269,7 @@ const UkuleleDiagram: React.FC<{ data: typeof UKULELE_CHORDS[string] }> = ({ dat
           y1={startY}
           x2={startX + s * stringSpacing}
           y2={startY + numFrets * fretSpacing}
-          stroke="#737373"
+          stroke={stringColor}
           strokeWidth="1.5"
         />
       ))}
@@ -269,7 +284,7 @@ const UkuleleDiagram: React.FC<{ data: typeof UKULELE_CHORDS[string] }> = ({ dat
               cy={startY - 8}
               r="3.5"
               fill="none"
-              stroke="#a3a3a3"
+              stroke={t.isLight ? '#6A6458' : '#A3A3A3'}
               strokeWidth="1.5"
             />
           );
@@ -282,7 +297,7 @@ const UkuleleDiagram: React.FC<{ data: typeof UKULELE_CHORDS[string] }> = ({ dat
           const x = startX + stringIdx * stringSpacing;
           const y = startY + (fret - 0.5) * fretSpacing;
           return (
-            <circle key={`dot-${stringIdx}`} cx={x} cy={y} r="5" fill="#38bdf8" />
+            <circle key={`dot-${stringIdx}`} cx={x} cy={y} r="5" fill={dotColor} />
           );
         }
         return null;
@@ -292,7 +307,7 @@ const UkuleleDiagram: React.FC<{ data: typeof UKULELE_CHORDS[string] }> = ({ dat
 };
 
 // SVG Piano Keyboard Diagram
-const PianoDiagram: React.FC<{ chord: string }> = ({ chord }) => {
+const PianoDiagram: React.FC<{ chord: string; t: ThemeStyles }> = ({ chord, t }) => {
   const midiNotes = getChordMidiNotes(chord);
   // Pitch classes (0=C, 1=C#, 2=D, 3=D#, 4=E, 5=F, 6=F#, 7=G, 8=G#, 9=A, 10=A#, 11=B)
   const activePitchClasses = new Set(midiNotes.map((m) => m % 12));
@@ -322,6 +337,11 @@ const PianoDiagram: React.FC<{ chord: string }> = ({ chord }) => {
   const blackWidth = 9;
   const blackHeight = 32;
 
+  const inactiveWhiteFill = t.isLight ? '#FFFFFF' : '#FAFAFA';
+  const whiteStroke = t.isLight ? '#D8D1C2' : '#404040';
+  const inactiveBlackFill = t.isLight ? '#262320' : '#171717';
+  const blackStroke = t.isLight ? '#1A1815' : '#0A0A0A';
+
   return (
     <svg
       width={whiteKeys.length * keyWidth + 2}
@@ -338,8 +358,8 @@ const PianoDiagram: React.FC<{ chord: string }> = ({ chord }) => {
             y={1}
             width={keyWidth - 1}
             height={keyHeight}
-            fill={isActive ? '#38bdf8' : '#fafafa'}
-            stroke="#404040"
+            fill={isActive ? t.signalHex : inactiveWhiteFill}
+            stroke={whiteStroke}
             strokeWidth="1"
             rx="2"
           />
@@ -356,8 +376,8 @@ const PianoDiagram: React.FC<{ chord: string }> = ({ chord }) => {
             y={1}
             width={blackWidth}
             height={blackHeight}
-            fill={isActive ? '#38bdf8' : '#171717'}
-            stroke="#0a0a0a"
+            fill={isActive ? t.signalHex : inactiveBlackFill}
+            stroke={blackStroke}
             strokeWidth="1"
             rx="1"
           />

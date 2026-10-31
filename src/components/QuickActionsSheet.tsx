@@ -43,26 +43,28 @@ export const QuickActionsSheet: React.FC<Props> = ({
 
   // Compact floating panel colors with backdrop blur
   const panelBg = isLight
-    ? 'bg-white/95 border-slate-200 text-slate-900 shadow-xl shadow-slate-300/40'
+    ? 'bg-white/95 border-[#E6E0D4] text-[#1F1C17] shadow-xl shadow-[#1F1C17]/15'
     : isDarkSlate
-    ? 'bg-[#111c30]/95 border-slate-700/80 text-slate-100 shadow-2xl shadow-black/70'
-    : 'bg-neutral-900/95 border-neutral-700/80 text-neutral-100 shadow-2xl shadow-black/80';
+    ? 'bg-[#16223B]/95 border-[#2C3D5E] text-[#E8EEF8] shadow-2xl shadow-black/60'
+    : 'bg-[#1C1A16]/95 border-[#3A362F] text-[#F3EEE3] shadow-2xl shadow-black/80';
 
   const headerBg = isLight
-    ? 'border-b border-slate-200 bg-sky-50/70'
+    ? 'border-b border-[#E6E0D4] bg-[#F3EFE6]/80'
     : isDarkSlate
-    ? 'border-b border-slate-700/80 bg-[#0b1424]/90'
-    : 'border-b border-neutral-800 bg-neutral-950/80';
+    ? 'border-b border-[#2C3D5E] bg-[#111B30]/90'
+    : 'border-b border-[#2C2924] bg-[#141210]/90';
 
   const cardBg = isLight
-    ? 'bg-slate-50 border-slate-200'
+    ? 'bg-[#F8F6F1] border-[#E6E0D4]'
     : isDarkSlate
-    ? 'bg-[#0b1424]/60 border-slate-800'
-    : 'bg-neutral-950/50 border-neutral-800/80';
+    ? 'bg-[#0D1526]/60 border-[#22304A]'
+    : 'bg-[#0F0E0C]/60 border-[#2C2924]';
 
   const controlBg = isLight
-    ? 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100'
-    : 'bg-neutral-800 border-neutral-700 text-neutral-300 hover:bg-neutral-700 hover:text-white';
+    ? 'bg-white border-[#D8D1C2] text-[#1F1C17] hover:bg-[#F0ECE2]'
+    : isDarkSlate
+    ? 'bg-[#16223B] border-[#2C3D5E] text-[#C9D5E8] hover:bg-[#1D2B48] hover:text-white'
+    : 'bg-[#1A1815] border-[#3A362F] text-[#D9D3C5] hover:bg-[#262320] hover:text-white';
 
   return (
     <>
@@ -80,7 +82,7 @@ export const QuickActionsSheet: React.FC<Props> = ({
         {/* Header - Compact */}
         <div className={`px-3 py-2 flex items-center justify-between shrink-0 ${headerBg}`}>
           <div className="flex items-center gap-1.5 min-w-0">
-            <Sliders className={`w-3.5 h-3.5 shrink-0 ${isLight ? 'text-blue-700' : isDarkSlate ? 'text-sky-400' : 'text-amber-400'}`} />
+            <Sliders className={`w-3.5 h-3.5 shrink-0 ${isLight ? 'text-[#B45309]' : isDarkSlate ? 'text-sky-400' : 'text-amber-400'}`} />
             <h3 className="font-bold text-xs tracking-tight truncate">
               แถบควบคุมด่วน (Quick Actions)
             </h3>

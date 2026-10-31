@@ -1,23 +1,27 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { MetronomeEngine, TapTempoCalculator } from '../utils/metronome';
-import { Play, Square, Minus, Plus, Activity, Volume2 } from 'lucide-react';
+import { Play, Square, Minus, Plus, Activity } from 'lucide-react';
+import { getThemeStyles } from '../utils/themeStyles';
 
 interface Props {
   initialBpm?: number;
   onBpmChange?: (bpm: number) => void;
   compact?: boolean;
+  theme?: string;
 }
 
 export const MetronomeBar: React.FC<Props> = ({
   initialBpm = 120,
   onBpmChange,
-  compact = false
+  compact = false,
+  theme
 }) => {
   const [bpm, setBpm] = useState(initialBpm);
   const [isPlaying, setIsPlaying] = useState(false);
   const [beatsPerBar, setBeatsPerBar] = useState(4);
   const [currentBeat, setCurrentBeat] = useState(-1);
   const [tapActive, setTapActive] = useState(false);
+  const t = getThemeStyles(theme);
 
   const engineRef = useRef<MetronomeEngine | null>(null);
   const tapCalculatorRef = useRef<TapTempoCalculator>(new TapTempoCalculator());
@@ -83,11 +87,11 @@ export const MetronomeBar: React.FC<Props> = ({
 
   if (compact) {
     return (
-      <div className="flex items-center gap-2 p-1.5 rounded-lg bg-neutral-900 border border-neutral-800 text-neutral-200">
+      <div className={`flex items-center gap-2 p-1.5 rounded-lg border ${t.card} ${t.textStrong}`}>
         <button
           onClick={handleToggle}
           className={`flex items-center justify-center w-8 h-8 rounded-md transition-colors cursor-pointer ${
-            isPlaying ? 'bg-amber-500 text-neutral-950 font-bold' : 'bg-neutral-800 hover:bg-neutral-700 text-neutral-300'
+            isPlaying ? `${t.accentBtn}` : `${t.ghostBtn}`
           }`}
           title={isPlaying ? 'Stop metronome' : 'Start metronome'}
         >
@@ -95,10 +99,10 @@ export const MetronomeBar: React.FC<Props> = ({
         </button>
 
         <div className="flex items-center gap-1.5">
-          <span className="font-mono font-bold text-sm text-neutral-100 tabular-nums">
+          <span className={`font-mono font-bold text-sm tabular-nums ${t.textStrong}`}>
             {bpm}
           </span>
-          <span className="text-[10px] text-neutral-400 font-medium">BPM</span>
+          <span className={`text-[10px] font-medium ${t.textMuted}`}>BPM</span>
         </div>
 
         {/* Visual beat indicator */}
@@ -110,8 +114,8 @@ export const MetronomeBar: React.FC<Props> = ({
                 currentBeat === i
                   ? i === 0
                     ? 'bg-amber-400 scale-125 shadow-[0_0_8px_rgba(251,191,36,0.8)]'
-                    : 'bg-neutral-300 scale-110'
-                  : 'bg-neutral-700'
+                    : 'bg-current scale-110'
+                  : t.track
               }`}
             />
           ))}
@@ -119,8 +123,8 @@ export const MetronomeBar: React.FC<Props> = ({
 
         <button
           onClick={handleTap}
-          className={`px-2 py-1 text-xs rounded font-medium border border-neutral-700 transition-colors cursor-pointer ${
-            tapActive ? 'bg-amber-500/20 text-amber-300 border-amber-500/50' : 'bg-neutral-800 text-neutral-400 hover:text-neutral-200'
+          className={`px-2 py-1 text-xs rounded font-medium border transition-colors cursor-pointer ${
+            tapActive ? t.segOn : t.ghostBtn
           }`}
         >
           TAP
@@ -130,16 +134,16 @@ export const MetronomeBar: React.FC<Props> = ({
   }
 
   return (
-    <div className="flex flex-col gap-2 p-3 rounded-xl bg-neutral-900/95 border border-neutral-800 text-neutral-200 shadow-xl backdrop-blur-md select-none">
+    <div className={`flex flex-col gap-2.5 p-3.5 rounded-2xl border shadow-2xl backdrop-blur-md select-none ${t.dialog}`}>
       {/* Header: Title & Time Signature */}
       <div className="flex items-center justify-between pr-6">
         <div className="flex items-center gap-1.5">
-          <Activity className="w-3.5 h-3.5 text-amber-400" />
-          <span className="text-xs font-bold tracking-tight text-neutral-200">Metronome</span>
+          <Activity className={`w-3.5 h-3.5 ${t.accentText}`} />
+          <span className={`text-xs font-bold tracking-tight ${t.textStrong}`}>Metronome</span>
         </div>
 
         {/* Time Signature selector */}
-        <div className="flex items-center gap-0.5 bg-neutral-950 p-0.5 rounded-md border border-neutral-800">
+        <div className={`flex items-center gap-0.5 p-0.5 rounded-md border ${t.card}`}>
           {[
             { label: '4/4', beats: 4 },
             { label: '3/4', beats: 3 },
@@ -151,8 +155,8 @@ export const MetronomeBar: React.FC<Props> = ({
               onClick={() => handleTimeSig(item.beats)}
               className={`px-1.5 py-0.5 text-[10px] font-mono font-semibold rounded transition-colors cursor-pointer ${
                 beatsPerBar === item.beats
-                  ? 'bg-neutral-800 text-amber-400 font-bold shadow-xs'
-                  : 'text-neutral-400 hover:text-neutral-200'
+                  ? t.segOn
+                  : `${t.textMuted} hover:${t.textStrong}`
               }`}
             >
               {item.label}
@@ -165,36 +169,36 @@ export const MetronomeBar: React.FC<Props> = ({
       <div className="flex items-center justify-center gap-1.5 py-0.5">
         <button
           onClick={() => handleBpmUpdate(bpm - 5)}
-          className="px-2 py-1 text-[11px] font-mono font-bold rounded bg-neutral-800 hover:bg-neutral-700 text-neutral-300 transition-colors cursor-pointer active:scale-95"
+          className={`px-2 py-1 text-[11px] font-mono font-bold rounded border transition-colors cursor-pointer active:scale-95 ${t.ghostBtn}`}
           title="Minus 5 BPM"
         >
           -5
         </button>
         <button
           onClick={() => handleBpmUpdate(bpm - 1)}
-          className="p-1 rounded bg-neutral-800 hover:bg-neutral-700 text-neutral-300 transition-colors cursor-pointer active:scale-95"
+          className={`p-1 rounded border transition-colors cursor-pointer active:scale-95 ${t.ghostBtn}`}
           title="Minus 1 BPM"
         >
           <Minus className="w-3.5 h-3.5" />
         </button>
 
         <div className="flex flex-col items-center min-w-16 px-1.5">
-          <span className="text-2xl font-black font-mono text-neutral-100 tabular-nums tracking-tight leading-none">
+          <span className={`text-2xl font-black font-mono tabular-nums tracking-tight leading-none ${t.textStrong}`}>
             {bpm}
           </span>
-          <span className="text-[9px] text-neutral-400 uppercase tracking-widest font-semibold mt-0.5">BPM</span>
+          <span className={`text-[9px] uppercase tracking-widest font-semibold mt-0.5 ${t.textMuted}`}>BPM</span>
         </div>
 
         <button
           onClick={() => handleBpmUpdate(bpm + 1)}
-          className="p-1 rounded bg-neutral-800 hover:bg-neutral-700 text-neutral-300 transition-colors cursor-pointer active:scale-95"
+          className={`p-1 rounded border transition-colors cursor-pointer active:scale-95 ${t.ghostBtn}`}
           title="Plus 1 BPM"
         >
           <Plus className="w-3.5 h-3.5" />
         </button>
         <button
           onClick={() => handleBpmUpdate(bpm + 5)}
-          className="px-2 py-1 text-[11px] font-mono font-bold rounded bg-neutral-800 hover:bg-neutral-700 text-neutral-300 transition-colors cursor-pointer active:scale-95"
+          className={`px-2 py-1 text-[11px] font-mono font-bold rounded border transition-colors cursor-pointer active:scale-95 ${t.ghostBtn}`}
           title="Plus 5 BPM"
         >
           +5
@@ -208,7 +212,7 @@ export const MetronomeBar: React.FC<Props> = ({
         max={240}
         value={bpm}
         onChange={(e) => handleBpmUpdate(parseInt(e.target.value, 10))}
-        className="w-full accent-amber-400 bg-neutral-800 rounded h-1.5 cursor-pointer"
+        className={`w-full rounded h-1.5 cursor-pointer ${t.accentColor}`}
       />
 
       {/* Play/Stop & Tap Tempo buttons */}
@@ -218,8 +222,8 @@ export const MetronomeBar: React.FC<Props> = ({
           type="button"
           className={`flex items-center justify-center py-1.5 px-2 text-xs font-bold rounded-lg border transition-all cursor-pointer active:scale-95 select-none ${
             tapActive
-              ? 'bg-amber-400 text-neutral-950 border-amber-300 shadow-[0_0_10px_rgba(251,191,36,0.6)] scale-[0.98]'
-              : 'bg-neutral-800 border-neutral-700 text-neutral-200 hover:bg-neutral-750 hover:border-neutral-600'
+              ? t.segOn
+              : t.ghostBtn
           }`}
         >
           <span>TAP</span>
@@ -230,8 +234,8 @@ export const MetronomeBar: React.FC<Props> = ({
           type="button"
           className={`flex items-center justify-center gap-1.5 py-1.5 px-2 text-xs font-bold rounded-lg transition-all cursor-pointer active:scale-95 select-none shadow-sm ${
             isPlaying
-              ? 'bg-amber-500 hover:bg-amber-400 text-neutral-950 shadow-[0_0_12px_rgba(251,191,36,0.4)]'
-              : 'bg-sky-500 hover:bg-sky-400 text-neutral-950 shadow-[0_0_10px_rgba(14,165,233,0.3)]'
+              ? 'bg-rose-500 hover:bg-rose-600 text-white'
+              : t.accentBtn
           }`}
         >
           {isPlaying ? (
@@ -242,7 +246,7 @@ export const MetronomeBar: React.FC<Props> = ({
           ) : (
             <>
               <Play className="w-3.5 h-3.5 fill-current shrink-0" />
-              <span>CLICK</span>
+              <span>START</span>
             </>
           )}
         </button>
@@ -259,8 +263,8 @@ export const MetronomeBar: React.FC<Props> = ({
               currentBeat === i
                 ? i === 0
                   ? 'bg-amber-400 scale-125 shadow-[0_0_10px_rgba(251,191,36,0.9)] text-neutral-950 font-bold'
-                  : 'bg-sky-400 scale-110 shadow-[0_0_6px_rgba(56,189,248,0.7)] text-neutral-950 font-bold'
-                : 'bg-neutral-800 text-neutral-500 border border-neutral-700/80'
+                  : `${t.accentBtn} scale-110 shadow-xs font-bold`
+                : `${t.track} ${t.textMuted}`
             }`}
           >
             <span className="text-[9px] font-mono font-bold">{i + 1}</span>

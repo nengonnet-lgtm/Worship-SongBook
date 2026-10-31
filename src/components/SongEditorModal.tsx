@@ -14,6 +14,7 @@ import {
 } from '../utils/chordProFormatter';
 import { ChordHelperSidebar } from './ChordHelperSidebar';
 import { ChordLine } from './ChordLine';
+import { getThemeStyles } from '../utils/themeStyles';
 import './chordSheetFont.css';
 import {
   X,
@@ -44,6 +45,7 @@ export const SongEditorModal: React.FC<Props> = ({
   onSave,
   onClose
 }) => {
+  const t = getThemeStyles(settings.theme);
   const [showMoreMeta, setShowMoreMeta] = useState(false);
   const [title, setTitle] = useState(song ? song.title : '');
   const [artist, setArtist] = useState(song ? song.artist : '');
@@ -276,23 +278,23 @@ export const SongEditorModal: React.FC<Props> = ({
 
   return (
     <div className="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4">
-      <div className="flex flex-col w-full max-w-5xl h-[92vh] bg-neutral-900 border border-neutral-800 rounded-2xl shadow-2xl overflow-hidden text-neutral-100">
+      <div className={`flex flex-col w-full max-w-5xl h-[92vh] rounded-2xl shadow-2xl overflow-hidden border ${t.dialog}`}>
         {/* Top Bar */}
-        <div className="flex items-center justify-between px-6 py-2.5 border-b border-neutral-800 bg-neutral-950/50 shrink-0">
+        <div className={`flex items-center justify-between px-6 py-2.5 border-b shrink-0 ${t.dialogBar}`}>
           <div className="flex items-center gap-2.5 min-w-0">
-            <Music className="w-4 h-4 text-[#F59E0B] shrink-0" />
-            <span className="font-bold text-sm sm:text-base tracking-tight truncate">
+            <Music className="w-4 h-4 shrink-0" style={{ color: t.signalHex }} />
+            <span className={`font-bold text-sm sm:text-base tracking-tight truncate ${t.textStrong}`}>
               {song ? `Edit: ${song.title}` : 'Create New Chord Sheet'}
             </span>
           </div>
 
           <div className="flex items-center gap-3 shrink-0">
-            <div className="hidden sm:flex items-center p-0.5 rounded-lg bg-neutral-800 border border-neutral-700 text-xs">
+            <div className={`hidden sm:flex items-center p-0.5 rounded-lg border text-xs ${t.dialog}`}>
               <button
                 type="button"
                 onClick={() => setActiveTab('editor')}
-                className={`px-3 py-1 rounded-md font-medium transition-colors cursor-pointer ${
-                  activeTab === 'editor' ? 'bg-neutral-900 text-[#F59E0B] font-bold shadow-xs' : 'text-neutral-400 hover:text-neutral-200'
+                className={`px-3 py-1 rounded-md font-medium transition-colors cursor-pointer border ${
+                  activeTab === 'editor' ? t.segOn : t.segOff
                 }`}
               >
                 Code
@@ -300,8 +302,8 @@ export const SongEditorModal: React.FC<Props> = ({
               <button
                 type="button"
                 onClick={() => setActiveTab('split')}
-                className={`px-3 py-1 rounded-md font-medium transition-colors cursor-pointer ${
-                  activeTab === 'split' ? 'bg-neutral-900 text-[#F59E0B] font-bold shadow-xs' : 'text-neutral-400 hover:text-neutral-200'
+                className={`px-3 py-1 rounded-md font-medium transition-colors cursor-pointer border ${
+                  activeTab === 'split' ? t.segOn : t.segOff
                 }`}
               >
                 Side by Side
@@ -309,8 +311,8 @@ export const SongEditorModal: React.FC<Props> = ({
               <button
                 type="button"
                 onClick={() => setActiveTab('preview')}
-                className={`px-3 py-1 rounded-md font-medium transition-colors cursor-pointer ${
-                  activeTab === 'preview' ? 'bg-neutral-900 text-[#F59E0B] font-bold shadow-xs' : 'text-neutral-400 hover:text-neutral-200'
+                className={`px-3 py-1 rounded-md font-medium transition-colors cursor-pointer border ${
+                  activeTab === 'preview' ? t.segOn : t.segOff
                 }`}
               >
                 Preview
@@ -320,7 +322,7 @@ export const SongEditorModal: React.FC<Props> = ({
             <button
               type="button"
               onClick={handleSave}
-              className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-[#F59E0B] hover:bg-[#FBBF24] text-neutral-950 font-bold text-xs transition-colors cursor-pointer"
+              className={`flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs transition-colors cursor-pointer ${t.accentBtn}`}
             >
               <Save className="w-4 h-4" />
               <span>Save Song</span>
@@ -329,7 +331,7 @@ export const SongEditorModal: React.FC<Props> = ({
             <button
               type="button"
               onClick={onClose}
-              className="p-1.5 rounded-lg text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800 cursor-pointer"
+              className={`p-1.5 rounded-lg cursor-pointer transition-colors ${t.iconBtn}`}
             >
               <X className="w-5 h-5" />
             </button>
@@ -337,7 +339,7 @@ export const SongEditorModal: React.FC<Props> = ({
         </div>
 
         {/* 1. Metadata Inputs Bar */}
-        <div className="px-6 py-2 border-b border-neutral-800 bg-neutral-950/40 text-xs shrink-0 space-y-2">
+        <div className={`px-6 py-2 border-b text-xs shrink-0 space-y-2 ${t.dialogBar}`}>
           <div className="grid grid-cols-2 sm:grid-cols-12 gap-2 items-center">
             <div className="sm:col-span-4">
               <input
@@ -345,7 +347,7 @@ export const SongEditorModal: React.FC<Props> = ({
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="Song Title..."
-                className="w-full px-2.5 py-1 rounded-lg bg-neutral-800 border border-neutral-700 text-neutral-100 focus:outline-none focus:border-[#F59E0B]"
+                className={`w-full px-2.5 py-1 rounded-lg border focus:outline-none ${t.field}`}
               />
             </div>
 
@@ -355,16 +357,17 @@ export const SongEditorModal: React.FC<Props> = ({
                 value={artist}
                 onChange={(e) => setArtist(e.target.value)}
                 placeholder="Artist / Author..."
-                className="w-full px-2.5 py-1 rounded-lg bg-neutral-800 border border-neutral-700 text-neutral-100 focus:outline-none focus:border-[#F59E0B]"
+                className={`w-full px-2.5 py-1 rounded-lg border focus:outline-none ${t.field}`}
               />
             </div>
 
             <div className="sm:col-span-2 flex items-center gap-1">
-              <span className="text-neutral-400 font-medium">Key:</span>
+              <span className={`font-medium ${t.textMuted}`}>Key:</span>
               <select
                 value={key}
                 onChange={(e) => setKey(e.target.value)}
-                className="w-full px-2 py-1 rounded-lg bg-neutral-800 border border-neutral-700 text-neutral-100 focus:outline-none focus:border-[#F59E0B] cursor-pointer font-bold text-[#F59E0B]"
+                className={`w-full px-2 py-1 rounded-lg border focus:outline-none cursor-pointer font-bold ${t.field}`}
+                style={{ color: t.signalHex }}
               >
                 {KEYS.map((k) => (
                   <option key={k} value={k}>{k}</option>
@@ -373,12 +376,12 @@ export const SongEditorModal: React.FC<Props> = ({
             </div>
 
             <div className="sm:col-span-2 flex items-center gap-1">
-              <span className="text-neutral-400 font-medium">BPM:</span>
+              <span className={`font-medium ${t.textMuted}`}>BPM:</span>
               <input
                 type="number"
                 value={tempo}
                 onChange={(e) => setTempo(parseInt(e.target.value, 10))}
-                className="w-full px-2 py-1 rounded-lg bg-neutral-800 border border-neutral-700 text-neutral-100 focus:outline-none focus:border-[#F59E0B] font-mono"
+                className={`w-full px-2 py-1 rounded-lg border focus:outline-none font-mono ${t.field}`}
               />
             </div>
 
@@ -386,7 +389,7 @@ export const SongEditorModal: React.FC<Props> = ({
               <button
                 type="button"
                 onClick={() => setShowMoreMeta(!showMoreMeta)}
-                className="px-2 py-1 rounded bg-neutral-800 hover:bg-neutral-700 text-neutral-400 hover:text-neutral-200 text-[11px] whitespace-nowrap cursor-pointer"
+                className={`px-2 py-1 rounded border text-[11px] whitespace-nowrap cursor-pointer ${t.ghostBtn}`}
               >
                 {showMoreMeta ? '▲ ซ่อน' : '▼ เพิ่มเติม'}
               </button>
@@ -395,32 +398,32 @@ export const SongEditorModal: React.FC<Props> = ({
 
           {/* ข้อมูลเสริม (Capo, Tags, Notes) */}
           {showMoreMeta && (
-            <div className="grid grid-cols-1 sm:grid-cols-6 gap-2 pt-2 border-t border-neutral-800/60 animate-fadeIn">
+            <div className={`grid grid-cols-1 sm:grid-cols-6 gap-2 pt-2 border-t animate-fadeIn ${t.popoverDivider}`}>
               <div>
-                <label className="block text-[10px] text-neutral-400 mb-0.5">Capo</label>
+                <label className={`block text-[10px] mb-0.5 ${t.textMuted}`}>Capo</label>
                 <input
                   type="number"
                   value={capo}
                   onChange={(e) => setCapo(parseInt(e.target.value, 10))}
-                  className="w-full px-2 py-1 rounded bg-neutral-800 border border-neutral-700 text-neutral-100 font-mono"
+                  className={`w-full px-2 py-1 rounded border font-mono ${t.field}`}
                 />
               </div>
               <div className="sm:col-span-2">
-                <label className="block text-[10px] text-neutral-400 mb-0.5">Tags</label>
+                <label className={`block text-[10px] mb-0.5 ${t.textMuted}`}>Tags</label>
                 <input
                   type="text"
                   value={tagsInput}
                   onChange={(e) => setTagsInput(e.target.value)}
-                  className="w-full px-2 py-1 rounded bg-neutral-800 border border-neutral-700 text-neutral-100"
+                  className={`w-full px-2 py-1 rounded border ${t.field}`}
                 />
               </div>
               <div className="sm:col-span-3">
-                <label className="block text-[10px] text-neutral-400 mb-0.5">Performance Notes</label>
+                <label className={`block text-[10px] mb-0.5 ${t.textMuted}`}>Performance Notes</label>
                 <input
                   type="text"
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  className="w-full px-2 py-1 rounded bg-neutral-800 border border-neutral-700 text-neutral-100"
+                  className={`w-full px-2 py-1 rounded border ${t.field}`}
                 />
               </div>
             </div>
@@ -428,7 +431,7 @@ export const SongEditorModal: React.FC<Props> = ({
         </div>
 
         {/* 2. Compact Toolbar with ChordPro Formatting */}
-        <div className="relative px-6 py-1.5 border-b border-neutral-800 bg-neutral-950/70 text-xs shrink-0">
+        <div className={`relative px-6 py-1.5 border-b text-xs shrink-0 ${t.dialogBar}`}>
           <div className="flex items-center justify-between gap-2 overflow-x-auto scrollbar-none">
             <div className="flex items-center gap-1.5 shrink-0">
               {/* ปุ่มเปิด/ปิด แถบคอร์ดด้านซ้าย */}
@@ -437,31 +440,31 @@ export const SongEditorModal: React.FC<Props> = ({
                 onClick={toggleChordSidebar}
                 className={`flex items-center gap-1 px-2.5 py-1 rounded-lg border text-[11px] font-semibold cursor-pointer transition-colors ${
                   !isChordSidebarCollapsed
-                    ? 'bg-[#F59E0B]/20 text-[#FBBF24] border-[#F59E0B]/40 hover:bg-[#F59E0B]/30'
-                    : 'bg-neutral-800 text-neutral-300 border-neutral-700 hover:bg-neutral-700'
+                    ? t.segOn
+                    : t.ghostBtn
                 }`}
                 title={isChordSidebarCollapsed ? 'ขยายแถบตัวช่วยแทรกคอร์ดด้านซ้าย' : 'ยุบแถบตัวช่วยแทรกคอร์ดด้านซ้าย'}
               >
-                <Music className="w-3.5 h-3.5 text-[#F59E0B]" />
+                <Music className="w-3.5 h-3.5" style={{ color: !isChordSidebarCollapsed ? undefined : t.signalHex }} />
                 <span>{isChordSidebarCollapsed ? 'แถบคอร์ด ◀' : 'ซ่อนคอร์ด'}</span>
               </button>
 
               {/* ปุ่มหลัก: จัดรูปแบบ ChordPro */}
-              <div className="flex items-center rounded-lg bg-[#F59E0B]/20 border border-[#F59E0B]/40 p-0.5 shadow-xs">
+              <div className="flex items-center rounded-lg border p-0.5 shadow-xs" style={{ borderColor: `${t.signalHex}66` }}>
                 <button
                   type="button"
                   onClick={() => handleAutoFormatAll(false)}
-                  className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-[#F59E0B] hover:bg-[#FBBF24] text-neutral-950 font-bold text-[11px] transition-colors cursor-pointer"
+                  className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-[11px] transition-colors cursor-pointer ${t.accentBtn}`}
                   title="จัดรูปแบบ ChordPro อัตโนมัติ (แก้ไขวงเล็บคอร์ด, หัวข้อท่อน, ตัวพิมพ์คอร์ด และสระไทย)"
                 >
-                  <Wand2 className="w-3.5 h-3.5 text-neutral-950" />
+                  <Wand2 className="w-3.5 h-3.5" />
                   <span>จัดรูปแบบ ChordPro</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => setShowFormatDropdown(!showFormatDropdown)}
-                  className="px-1.5 py-0.5 text-[#FBBF24] hover:text-[#FEF3C7] hover:bg-[#F59E0B]/30 rounded-md transition-colors cursor-pointer"
+                  className={`px-1.5 py-0.5 rounded-md transition-colors cursor-pointer ${t.iconBtn}`}
                   title="ตัวเลือกการจัดรูปแบบเพิ่มเติม"
                 >
                   <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showFormatDropdown ? 'rotate-180' : ''}`} />
@@ -472,23 +475,24 @@ export const SongEditorModal: React.FC<Props> = ({
               <button
                 type="button"
                 onClick={handleConvertTo2Line}
-                className="hidden md:flex items-center gap-1 px-2 py-1 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-300 border border-neutral-700 text-[11px] font-medium cursor-pointer transition-colors"
+                className={`hidden md:flex items-center gap-1 px-2 py-1 rounded-lg border text-[11px] font-medium cursor-pointer transition-colors ${t.ghostBtn}`}
                 title="แปลง ChordPro ให้อยู่ในรูปคอร์ดลอยบนเนื้อเพลง"
               >
-                <ArrowRightLeft className="w-3.5 h-3.5 text-neutral-400" />
+                <ArrowRightLeft className={`w-3.5 h-3.5 ${t.textMuted}`} />
                 <span>➔ 2 บรรทัด</span>
               </button>
             </div>
 
             {/* Quick Section Headers and Bracket Insert */}
             <div className="flex items-center gap-1.5 shrink-0">
-              <span className="text-[10px] font-semibold text-neutral-500 uppercase">ท่อน:</span>
+              <span className={`text-[10px] font-semibold uppercase ${t.textMuted}`}>ท่อน:</span>
               {['{c: Intro}', '{c: Verse 1}', '{c: Verse 2}', '{c: Chorus}', '{c: Bridge}', '{c: Pre-Chorus}', '{c: Outro}'].map((sec) => (
                 <button
                   key={sec}
                   type="button"
                   onClick={() => insertTextAtCursor(`\n${sec}\n`)}
-                  className="px-2 py-0.5 rounded bg-neutral-800 hover:bg-neutral-700 text-sky-400 font-mono text-[11px] border border-neutral-700 cursor-pointer shrink-0 transition-colors"
+                  className={`px-2 py-0.5 rounded font-mono text-[11px] border cursor-pointer shrink-0 transition-colors ${t.ghostBtn}`}
+                  style={{ color: t.signalHex }}
                   title={`แทรก ${sec}`}
                 >
                   {sec.replace(/[{c:\s}]/g, '')}
@@ -498,7 +502,8 @@ export const SongEditorModal: React.FC<Props> = ({
               <button
                 type="button"
                 onClick={() => insertTextAtCursor('[]')}
-                className="px-2 py-0.5 rounded bg-neutral-800 hover:bg-neutral-700 text-[#F59E0B] font-mono text-[11px] border border-neutral-700 cursor-pointer shrink-0 transition-colors"
+                className={`px-2 py-0.5 rounded font-mono text-[11px] border cursor-pointer shrink-0 transition-colors ${t.ghostBtn}`}
+                style={{ color: t.signalHex }}
                 title="แทรกวงเล็บคอร์ด []"
               >
                 [คอร์ด]
@@ -513,95 +518,95 @@ export const SongEditorModal: React.FC<Props> = ({
                 className="fixed inset-0 z-40"
                 onClick={() => setShowFormatDropdown(false)}
               />
-              <div className="absolute left-6 top-full mt-1.5 z-50 w-80 bg-neutral-900 border border-neutral-700 rounded-xl shadow-2xl p-2 space-y-1 text-neutral-200 animate-fadeIn">
-                <div className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-neutral-400 border-b border-neutral-800">
+              <div className={`absolute left-6 top-full mt-1.5 z-50 w-80 rounded-xl shadow-2xl p-2 space-y-1 animate-fadeIn border ${t.popover}`}>
+                <div className={`px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider border-b ${t.textMuted} ${t.popoverDivider}`}>
                   เครื่องมือจัดรูปแบบ ChordPro
                 </div>
 
                 <button
                   type="button"
                   onClick={() => handleAutoFormatAll(false)}
-                  className="w-full flex items-start gap-2.5 px-2.5 py-1.5 rounded-lg hover:bg-neutral-800 text-left transition-colors cursor-pointer group"
+                  className={`w-full flex items-start gap-2.5 px-2.5 py-1.5 rounded-lg text-left transition-colors cursor-pointer group ${t.popoverItem}`}
                 >
-                  <Wand2 className="w-4 h-4 text-[#F59E0B] shrink-0 mt-0.5 group-hover:scale-110 transition-transform" />
+                  <Wand2 className="w-4 h-4 shrink-0 mt-0.5 group-hover:scale-110 transition-transform" style={{ color: t.signalHex }} />
                   <div>
-                    <div className="font-semibold text-xs text-[#F59E0B]">จัดรูปแบบทั้งหมดอัตโนมัติ (แนะนำ)</div>
-                    <div className="text-[10px] text-neutral-400 leading-tight">ซ่อมแซมวงเล็บ [C], หัวข้อท่อน {`{c:...}`}, ตัวพิมพ์คอร์ด และสระไทย</div>
+                    <div className="font-semibold text-xs" style={{ color: t.signalHex }}>จัดรูปแบบทั้งหมดอัตโนมัติ (แนะนำ)</div>
+                    <div className={`text-[10px] leading-tight ${t.textMuted}`}>ซ่อมแซมวงเล็บ [C], หัวข้อท่อน {'{c:...}'}, ตัวพิมพ์คอร์ด และสระไทย</div>
                   </div>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => handleAutoFormatAll(true)}
-                  className="w-full flex items-start gap-2.5 px-2.5 py-1.5 rounded-lg hover:bg-neutral-800 text-left transition-colors cursor-pointer"
+                  className={`w-full flex items-start gap-2.5 px-2.5 py-1.5 rounded-lg text-left transition-colors cursor-pointer ${t.popoverItem}`}
                 >
                   <FileCode2 className="w-4 h-4 text-sky-400 shrink-0 mt-0.5" />
                   <div>
-                    <div className="font-semibold text-xs text-neutral-100">จัดรูปแบบ + ใส่ข้อมูลหัวเพลง</div>
-                    <div className="text-[10px] text-neutral-400 leading-tight">จัดรูปแบบพร้อมใส่แท็ก {`{title}`}, {`{artist}`}, {`{key}`}, {`{tempo}`}</div>
+                    <div className={`font-semibold text-xs ${t.textStrong}`}>จัดรูปแบบ + ใส่ข้อมูลหัวเพลง</div>
+                    <div className={`text-[10px] leading-tight ${t.textMuted}`}>จัดรูปแบบพร้อมใส่แท็ก {'{title}'}, {'{artist}'}, {'{key}'}, {'{tempo}'}</div>
                   </div>
                 </button>
 
                 <button
                   type="button"
                   onClick={handleStandardizeSectionsOnly}
-                  className="w-full flex items-start gap-2.5 px-2.5 py-1.5 rounded-lg hover:bg-neutral-800 text-left transition-colors cursor-pointer"
+                  className={`w-full flex items-start gap-2.5 px-2.5 py-1.5 rounded-lg text-left transition-colors cursor-pointer ${t.popoverItem}`}
                 >
                   <Layers className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
                   <div>
-                    <div className="font-semibold text-xs text-neutral-100">แปลงหัวข้อท่อนเป็น {`{c: ...}`}</div>
-                    <div className="text-[10px] text-neutral-400 leading-tight">แปลง [Intro], Verse 1:, [Chorus] ให้อยู่ในมาตรฐาน {`{c: ...}`}</div>
+                    <div className={`font-semibold text-xs ${t.textStrong}`}>แปลงหัวข้อท่อนเป็น {'{c: ...}'}</div>
+                    <div className={`text-[10px] leading-tight ${t.textMuted}`}>แปลง [Intro], Verse 1:, [Chorus] ให้อยู่ในมาตรฐาน {'{c: ...}'}</div>
                   </div>
                 </button>
 
                 <button
                   type="button"
                   onClick={handleCleanSpacingOnly}
-                  className="w-full flex items-start gap-2.5 px-2.5 py-1.5 rounded-lg hover:bg-neutral-800 text-left transition-colors cursor-pointer"
+                  className={`w-full flex items-start gap-2.5 px-2.5 py-1.5 rounded-lg text-left transition-colors cursor-pointer ${t.popoverItem}`}
                 >
                   <AlignLeft className="w-4 h-4 text-indigo-400 shrink-0 mt-0.5" />
                   <div>
-                    <div className="font-semibold text-xs text-neutral-100">จัดระเบียบการเว้นบรรทัด</div>
-                    <div className="text-[10px] text-neutral-400 leading-tight">ลบบรรทัดว่างส่วนเกินและเว้นวรรคหน้าท่อนเพลงอย่างเป็นระเบียบ</div>
+                    <div className={`font-semibold text-xs ${t.textStrong}`}>จัดระเบียบการเว้นบรรทัด</div>
+                    <div className={`text-[10px] leading-tight ${t.textMuted}`}>ลบบรรทัดว่างส่วนเกินและเว้นวรรคหน้าท่อนเพลงอย่างเป็นระเบียบ</div>
                   </div>
                 </button>
 
                 <button
                   type="button"
                   onClick={handleSyncFromChordProToFields}
-                  className="w-full flex items-start gap-2.5 px-2.5 py-1.5 rounded-lg hover:bg-neutral-800 text-left transition-colors cursor-pointer"
+                  className={`w-full flex items-start gap-2.5 px-2.5 py-1.5 rounded-lg text-left transition-colors cursor-pointer ${t.popoverItem}`}
                 >
                   <RefreshCw className="w-4 h-4 text-teal-400 shrink-0 mt-0.5" />
                   <div>
-                    <div className="font-semibold text-xs text-neutral-100">ดึงข้อมูลจาก ChordPro เข้าแบบฟอร์ม</div>
-                    <div className="text-[10px] text-neutral-400 leading-tight">สแกนหา {`{title}`}, {`{artist}`}, {`{key}`} ในเนื้อเพลงมาใส่ช่องกรอก</div>
+                    <div className={`font-semibold text-xs ${t.textStrong}`}>ดึงข้อมูลจาก ChordPro เข้าแบบฟอร์ม</div>
+                    <div className={`text-[10px] leading-tight ${t.textMuted}`}>สแกนหา {'{title}'}, {'{artist}'}, {'{key}'} ในเนื้อเพลงมาใส่ช่องกรอก</div>
                   </div>
                 </button>
 
                 <button
                   type="button"
                   onClick={handleSyncMetaHeaders}
-                  className="w-full flex items-start gap-2.5 px-2.5 py-1.5 rounded-lg hover:bg-neutral-800 text-left transition-colors cursor-pointer"
+                  className={`w-full flex items-start gap-2.5 px-2.5 py-1.5 rounded-lg text-left transition-colors cursor-pointer ${t.popoverItem}`}
                 >
                   <Sparkles className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
                   <div>
-                    <div className="font-semibold text-xs text-neutral-100">ซิงค์แบบฟอร์มเข้าเนื้อเพลง</div>
-                    <div className="text-[10px] text-neutral-400 leading-tight">นำ Title, Key, BPM ไปแทรกหรืออัปเดตเป็นแท็กหัวเพลง</div>
+                    <div className={`font-semibold text-xs ${t.textStrong}`}>ซิงค์แบบฟอร์มเข้าเนื้อเพลง</div>
+                    <div className={`text-[10px] leading-tight ${t.textMuted}`}>นำ Title, Key, BPM ไปแทรกหรืออัปเดตเป็นแท็กหัวเพลง</div>
                   </div>
                 </button>
 
-                <div className="pt-1 border-t border-neutral-800 flex items-center justify-between gap-1">
+                <div className={`pt-1 border-t flex items-center justify-between gap-1 ${t.popoverDivider}`}>
                   <button
                     type="button"
                     onClick={handleConvertSmart}
-                    className="flex-1 py-1 px-2 rounded bg-neutral-800 hover:bg-neutral-700 text-[10px] text-neutral-300 font-medium text-center cursor-pointer"
+                    className={`flex-1 py-1 px-2 rounded border text-[10px] font-medium text-center cursor-pointer ${t.ghostBtn}`}
                   >
                     2 บรรทัด ➔ ChordPro
                   </button>
                   <button
                     type="button"
                     onClick={handleConvertTo2Line}
-                    className="flex-1 py-1 px-2 rounded bg-neutral-800 hover:bg-neutral-700 text-[10px] text-neutral-300 font-medium text-center cursor-pointer"
+                    className={`flex-1 py-1 px-2 rounded border text-[10px] font-medium text-center cursor-pointer ${t.ghostBtn}`}
                   >
                     ChordPro ➔ 2 บรรทัด
                   </button>
@@ -613,15 +618,22 @@ export const SongEditorModal: React.FC<Props> = ({
 
         {/* Format Feedback Banner */}
         {formatFeedback && (
-          <div className="flex items-center justify-between px-6 py-1.5 bg-[#F59E0B]/15 border-b border-[#F59E0B]/30 text-[#FBBF24] text-xs shrink-0 animate-fadeIn">
+          <div
+            className="flex items-center justify-between px-6 py-1.5 border-b text-xs shrink-0 animate-fadeIn"
+            style={{
+              backgroundColor: `${t.signalHex}18`,
+              borderBottomColor: `${t.signalHex}40`,
+              color: t.signalHex
+            }}
+          >
             <div className="flex items-center gap-2 min-w-0">
-              <CheckCheck className="w-4 h-4 text-[#F59E0B] shrink-0" />
+              <CheckCheck className="w-4 h-4 shrink-0" />
               <span className="font-medium truncate">{formatFeedback.text}</span>
             </div>
             <button
               type="button"
               onClick={() => setFormatFeedback(null)}
-              className="ml-2 text-[#F59E0B] hover:text-[#FEF3C7] text-xs font-bold cursor-pointer"
+              className="ml-2 text-xs font-bold cursor-pointer hover:opacity-80"
             >
               ✕
             </button>
@@ -637,14 +649,15 @@ export const SongEditorModal: React.FC<Props> = ({
             onToggleCollapse={toggleChordSidebar}
             onInsertChord={handleInsertChordFromSidebar}
             usedChords={usedChords}
+            theme={settings.theme}
           />
 
           {/* ChordPro Editor Textarea */}
           {(activeTab === 'editor' || activeTab === 'split') && (
-            <div className={`flex flex-col h-full min-w-0 ${activeTab === 'split' ? 'flex-1 border-r border-neutral-800' : 'flex-1'}`}>
-              <div className="px-4 py-1.5 text-[11px] font-mono text-neutral-400 bg-neutral-900/90 border-b border-neutral-800 flex justify-between items-center">
+            <div className={`flex flex-col h-full min-w-0 ${activeTab === 'split' ? 'flex-1 border-r' : 'flex-1'} ${t.popoverDivider}`}>
+              <div className={`px-4 py-1.5 text-[11px] font-mono border-b flex justify-between items-center ${t.dialogBar} ${t.textMuted}`}>
                 <span>Chord & Lyrics Editor</span>
-                <span className="text-[10px] text-neutral-500">รองรับทั้งแบบ 2 บรรทัด และ [Chord]</span>
+                <span className="text-[10px] opacity-75">รองรับทั้งแบบ 2 บรรทัด และ [Chord]</span>
               </div>
 
               <textarea
@@ -653,69 +666,69 @@ export const SongEditorModal: React.FC<Props> = ({
                 onChange={(e) => setChordProContent(e.target.value)}
                 placeholder={`ตัวอย่างแบบ 2 บรรทัด:\n        D     Bm       G \nความรักมั่นคงของพระเจ้า ไม่เคยยั้งหยุด\n\nหรือพิมพ์แบบ ChordPro:\nความรักมั่น[D]คงของพระ[Bm]เจ้า ไม่เคยยั้ง[G]หยุด`}
                 spellCheck={false}
-                className="flex-1 w-full p-4 bg-neutral-950 chord-sheet-font text-sm leading-relaxed text-neutral-200 resize-none focus:outline-none focus:ring-0"
+                className={`flex-1 w-full p-4 chord-sheet-font text-sm leading-relaxed resize-none focus:outline-none focus:ring-0 ${t.page}`}
               />
             </div>
           )}
 
           {/* Live Preview Panel */}
           {(activeTab === 'preview' || activeTab === 'split') && (
-            <div className={`flex flex-col h-full min-w-0 overflow-y-auto p-6 ${
-              settings.theme === 'light' ? 'bg-white text-slate-900' : 'bg-neutral-950 text-neutral-100'
-            } ${activeTab === 'split' ? 'flex-1' : 'flex-1'}`}>
-    <div className="mb-3 pb-2 border-b border-neutral-800">
-      <span className="text-[10px] font-semibold uppercase tracking-widest font-mono text-neutral-400">
-        Live Stage Preview
-      </span>
-      <h2 className="text-base font-bold text-neutral-100">{title}</h2>
-    </div>
-
-    <div
-      className="space-y-6 font-mono text-sm leading-tight"
-      style={{
-        fontFamily: "'Courier New', Courier, 'JetBrains Mono', monospace",
-        letterSpacing: '0px'
-      }}
-    >
-      {previewParsed.sections.map((section, sIdx) => (
-        <div key={sIdx} className="space-y-3">
-          {section.title && (
-            <span className="text-xs font-bold font-mono uppercase tracking-wider block text-[#F59E0B]">
-              {section.title}
-            </span>
-          )}
-
-          {section.lines.map((line, lIdx) => {
-            if (line.type === 'empty') return <div key={lIdx} className="h-3" />;
-            if (line.type === 'comment') {
-              return (
-                <div key={lIdx} className="text-xs italic text-neutral-400">
-                  {line.comment}
-                </div>
-              );
-            }
-
-            // แสดงคอร์ดผูกกับตำแหน่งเนื้อร้องโดยตรง (ไม่ขึ้นกับความกว้างฟอนต์ ตรงกันทุกอุปกรณ์)
-            const items = line.items ?? [];
-
-            return (
-              <div key={lIdx} className="mb-3">
-                <ChordLine
-                  items={items}
-                  chordColor={settings.chordsColor || '#F59E0B'}
-                  lyricClassName="text-neutral-200"
-                />
+            <div className={`flex flex-col h-full min-w-0 overflow-y-auto p-6 ${t.page} ${activeTab === 'split' ? 'flex-1' : 'flex-1'}`}>
+              <div className={`mb-3 pb-2 border-b ${t.popoverDivider}`}>
+                <span className={`text-[10px] font-semibold uppercase tracking-widest font-mono ${t.textMuted}`}>
+                  Live Stage Preview
+                </span>
+                <h2 className={`text-base font-bold ${t.textStrong}`}>{title}</h2>
               </div>
-            );
-          })}
-        </div>
-      ))}
-    </div>
-  </div>
-)}
+
+              <div
+                className="space-y-6 font-mono text-sm leading-tight"
+                style={{
+                  fontFamily: "'Courier New', Courier, 'JetBrains Mono', monospace",
+                  letterSpacing: '0px'
+                }}
+              >
+                {previewParsed.sections.map((section, sIdx) => (
+                  <div key={sIdx} className="space-y-3">
+                    {section.title && (
+                      <span
+                        className="text-xs font-bold font-mono uppercase tracking-wider block"
+                        style={{ color: settings.chordsColor || t.signalHex }}
+                      >
+                        {section.title}
+                      </span>
+                    )}
+
+                    {section.lines.map((line, lIdx) => {
+                      if (line.type === 'empty') return <div key={lIdx} className="h-3" />;
+                      if (line.type === 'comment') {
+                        return (
+                          <div key={lIdx} className={`text-xs italic ${t.textMuted}`}>
+                            {line.comment}
+                          </div>
+                        );
+                      }
+
+                      // แสดงคอร์ดผูกกับตำแหน่งเนื้อร้องโดยตรง (ไม่ขึ้นกับความกว้างฟอนต์ ตรงกันทุกอุปกรณ์)
+                      const items = line.items ?? [];
+
+                      return (
+                        <div key={lIdx} className="mb-3">
+                          <ChordLine
+                            items={items}
+                            chordColor={settings.chordsColor || t.signalHex}
+                            lyricClassName={t.textStrong}
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
-
     </div>
   );
 };

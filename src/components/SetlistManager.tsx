@@ -865,9 +865,7 @@ export const SetlistManager: React.FC<Props> = ({
 
       {/* RIGHT PANE (min-w-0 / min-h-0 so the lyrics can never push the pane wider than the screen) */}
       <div
-        className={`flex-1 min-w-0 min-h-0 flex flex-col overflow-hidden relative ${
-          t.name === 'stage-black' ? 'bg-neutral-950 text-neutral-100' : t.page
-        }`}
+        className={`flex-1 min-w-0 min-h-0 flex flex-col overflow-hidden relative ${t.page}`}
       >
         {currentSong ? (
           <SongViewer

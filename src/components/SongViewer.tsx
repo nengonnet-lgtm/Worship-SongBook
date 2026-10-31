@@ -361,6 +361,36 @@ export const SongViewer: React.FC<Props> = ({
   }, [pdfHint]);
 
   /**
+   * Printing keeps the on-screen chord layout (chords at exactly the same positions as in the app), so a line
+   * cannot be re-wrapped for the paper. Instead the printed font size is reduced just enough for the widest
+   * chord line to fit the column. Line widths scale linearly with font size, so we measure them on screen.
+   */
+  const fitPrintFont = () => {
+    const scroller = scrollContainerRef.current;
+    const grid = scroller?.querySelector<HTMLElement>('.print-grid');
+    if (!scroller || !grid) return;
+    const mmToPx = 96 / 25.4;
+    const columns = settings.columns === 2 ? 2 : 1;
+    const pageWidthPx = (210 - 24) * mmToPx; // A4 minus the 12mm side margins set in @page
+    const columnWidthPx = columns === 2 ? (pageWidthPx - 10 * mmToPx) / 2 : pageWidthPx;
+    const screenFontPx = parseFloat(getComputedStyle(scroller).fontSize) || settings.fontSize || 16;
+    let widest = 0;
+    scroller.querySelectorAll<HTMLElement>('[data-chord-measure]').forEach((el) => {
+      widest = Math.max(widest, el.offsetWidth);
+    });
+    const basePx = (columns === 2 ? 9.5 : 11) * (96 / 72);
+    const fitPx = widest > 0 ? (screenFontPx * columnWidthPx) / widest : basePx;
+    const printPx = Math.max(6.5 * (96 / 72), Math.min(basePx, fitPx));
+    grid.style.setProperty('--print-font', `${printPx.toFixed(2)}px`);
+  };
+
+  // Ctrl+P / browser menu: the same fitting happens right before the print layout is built
+  useEffect(() => {
+    window.addEventListener('beforeprint', fitPrintFont);
+    return () => window.removeEventListener('beforeprint', fitPrintFont);
+  });
+
+  /**
    * Download as PDF = the browser's print-to-PDF using the print stylesheet (index.css, A4 portrait).
    * The page title becomes the suggested file name in the "Save as PDF" dialog, and is restored afterwards.
    */
@@ -384,6 +414,7 @@ export const SongViewer: React.FC<Props> = ({
     if (isApple) {
       setPdfHint('ในหน้าต่างพิมพ์: บีบนิ้วขยายตัวอย่างหน้า แล้วกดปุ่มแชร์ → บันทึกลงในไฟล์ (Save to Files) จะได้ไฟล์ PDF');
     }
+    fitPrintFont();
     window.print();
   };
 
@@ -785,7 +816,7 @@ export const SongViewer: React.FC<Props> = ({
         }}
         onPrintSong={() => {
           setShowQuickSettings(false);
-          window.print();
+          handleDownloadPdf();
         }}
       />
       </div>

@@ -277,6 +277,7 @@ export const ChordLine: React.FC<ChordLineProps> = ({
       <div
         ref={measureRef}
         aria-hidden="true"
+        data-chord-measure=""
         className="print:hidden"
         style={{
           position: 'absolute',
@@ -294,9 +295,9 @@ export const ChordLine: React.FC<ChordLineProps> = ({
 
       <div className="print:hidden">{wrapped ? renderWrapped() : renderExact(true)}</div>
 
-      {/* Printed page: always the wrapping layout, so a long line never runs off the paper
-          (the screen layout was measured for the screen width, not for the page width) */}
-      <div className="hidden print:block">{renderWrapped()}</div>
+      {/* Printed page: the exact layout (chords at the same positions as on screen). It is never wrapped;
+          SongViewer shrinks the printed font size just enough for the widest line to fit the paper. */}
+      <div className="hidden print:block">{renderExact(true)}</div>
     </div>
   );
 };

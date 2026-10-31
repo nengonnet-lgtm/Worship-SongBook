@@ -177,10 +177,10 @@
     margin: 0 !important;
   }
   .print-grid[data-print-cols='1'] {
-    font-size: 11pt !important;
+    font-size: var(--print-font, 11pt) !important;
   }
   .print-grid[data-print-cols='2'] {
-    font-size: 9.5pt !important;
+    font-size: var(--print-font, 9.5pt) !important;
     column-count: 2;
     column-gap: 10mm;
   }
